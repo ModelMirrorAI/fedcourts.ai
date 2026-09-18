@@ -6,11 +6,12 @@
 // The site never computes anything the repo doesn't already state; it
 // counts files and copies figures, each stamped with the commit they came from.
 
-import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
-import { join, relative, sep } from "node:path";
+import { join, relative, sep, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { glob } from "node:fs/promises";
 import * as tar from "tar";
@@ -52,7 +53,7 @@ async function main() {
 
     // --- metrics roll-ups (copied, not recomputed) ---
     const metrics = {};
-    for (const name of ["leaderboard", "claim-scores", "statpack", "backtest"]) {
+    for (const name of ["leaderboard", "claim-scores", "statpack", "backtest", "big-cases"]) {
       try { metrics[name] = await readJSON(join(dir, "metrics", `${name}.json`)); } catch { metrics[name] = null; }
     }
     const frozen = metrics.leaderboard?.frozen_process ?? { digests: [], since: null };
@@ -136,8 +137,9 @@ async function main() {
       },
       predictors,
       rows,
-      metrics: { leaderboard: metrics.leaderboard, statpack_terms: metrics.statpack?.interim?.terms ?? null },
+      metrics: { leaderboard: metrics.leaderboard, big_cases: metrics["big-cases"], statpack_terms: metrics.statpack?.interim?.terms ?? null },
     };
+    await mkdir(dirname(fileURLToPath(OUT)), { recursive: true });
     await writeFile(OUT, JSON.stringify(out, null, 1));
     console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), sha ${head.sha ?? "unknown"}`);
   } finally {
