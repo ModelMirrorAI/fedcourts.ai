@@ -1,0 +1,21 @@
+{
+  "name": "fedcourts.ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch": "node scripts/fetch-ledger.mjs",
+    "prebuild": "node scripts/fetch-ledger.mjs",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.0.0",
+    "@astrojs/sitemap": "^3.2.0",
+    "@fontsource-variable/source-serif-4": "^5.1.0",
+    "astro": "^5.0.0",
+    "tar": "^7.4.0",
+    "yaml": "^2.6.0"
+  }
+}
