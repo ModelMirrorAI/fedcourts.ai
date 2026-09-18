@@ -1,0 +1,22 @@
+---
+import Base from "../layouts/Base.astro";
+import BigCaseBoard from "../components/BigCaseBoard.astro";
+import Stamp from "../components/Stamp.astro";
+---
+<Base title="FedCourtsAI" description="Which Supreme Court cases matter, according to three frontier AI models — a public, timestamped ledger of pre-registered predictions." wide>
+  <h1>Which cases matter, according to the models</h1>
+  <p>
+    Three frontier models read every petition on the ledger and score how much the case matters, from 0 to 1.
+    Each row is the panel's current read of one case, ranked by the mean; expand a case to see the moments predicted,
+    each model's read and rationale, and a link to the committed prediction in the public repository.
+  </p>
+  <p>
+    <small>
+      A stakes score is neither a forecast nor a ranking of the models: it says nothing about whether a petition will be granted,
+      and it is never scored. The ordering is coarse — neighbouring rows sit closer together than the three models sit to each other inside one row.
+      Scored forecasts live on the <a href="/results">results</a> page.
+    </small>
+  </p>
+  <p><Stamp /></p>
+  <BigCaseBoard />
+</Base>
