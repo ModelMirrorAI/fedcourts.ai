@@ -1,0 +1,161 @@
+---
+// The big-case board: one row per predicted case, each predictor's current
+// stakes read and the panel mean, ranked mean-first. Rendered straight from
+// metrics/big-cases.json as copied into ledger.json at build time; nothing is
+// recomputed here. Rows expand (plain <details>, no JS) to the case's predicted
+// events and every predictor's newest read of each, linked to the committed cell.
+import ledger from "../data/ledger.json";
+
+const board = ledger.metrics?.big_cases ?? null;
+const predictors = board?.predictors ?? [];
+const rows = board?.rows ?? [];
+
+// Display names: strip the "-baseline" suffix the ledger uses and capitalize.
+const shortName = (id) => {
+  const base = id.replace(/-baseline$/, "");
+  return base.charAt(0).toUpperCase() + base.slice(1);
+};
+const score = (x) => (typeof x === "number" ? x.toFixed(2) : "—");
+const pct = (x) => (typeof x === "number" ? `${Math.round(x * 100)}%` : "—");
+const statusLabel = { pending: "pending", partly_resolved: "partly resolved", resolved: "resolved" };
+const current = (row) => new Map((row.current_reads ?? []).map((r) => [r.predictor_id, r]));
+const isCurrent = (row, read, eventId) => {
+  const c = current(row).get(read.predictor_id);
+  return Boolean(c && c.event_id === eventId && c.run_id === read.run_id);
+};
+---
+{board ? (
+  <section class="board" style={`--n:${predictors.length}`}>
+    <div class="row head" role="row">
+      <div class="case">Case</div>
+      {predictors.map((p) => <div class="num" title={p}>{shortName(p)}</div>)}
+      <div class="num mean">Mean</div>
+    </div>
+
+    {rows.map((row) => {
+      const reads = current(row);
+      return (
+        <details class="entry">
+          <summary class="row">
+            <div class="case">
+              <span class="caption">{row.caption ?? row.case_id}</span>
+              <span class="meta">
+                <span class="tag">{statusLabel[row.status] ?? row.status}</span>
+                {row.leakage_suspected && <span class="tag warn" title="A current read on this case is leakage-flagged: the mean rests partly on a cell that may have read the stakes off an outcome it should not have seen.">leakage flag</span>}
+              </span>
+            </div>
+            {predictors.map((p) => {
+              const r = reads.get(p);
+              return <div class="num" data-label={shortName(p)}>{r ? score(r.big_case_score) : "—"}</div>;
+            })}
+            <div class="num mean" data-label="Mean">
+              {score(row.mean_big_case_score)}
+              {row.n < predictors.length && <small title={`Mean over ${row.n} of ${predictors.length} predictors`}> {row.n}/{predictors.length}</small>}
+            </div>
+          </summary>
+
+          <div class="body">
+            <p class="ident">
+              <span class="mono">{row.case_id}</span>
+              {typeof row.score_range === "number" && <span> · panel spread {score(row.score_range)}</span>}
+            </p>
+            {(row.events ?? []).map((ev) => (
+              <div class="event">
+                <h3>
+                  {ev.title ?? ev.event_id}
+                  <span class="ev-meta">
+                    <span class="mono">{ev.event_id}</span>
+                    {ev.actual_disposition
+                      ? <span> · resolved {ev.resolved_at ?? ""}: <strong>{ev.actual_disposition}</strong></span>
+                      : <span> · pending</span>}
+                  </span>
+                </h3>
+                <ul class="reads">
+                  {(ev.reads ?? []).map((r) => (
+                    <li class:list={["read", { current: isCurrent(row, r, ev.event_id) }]}>
+                      <div class="read-head">
+                        <span class="who">{shortName(r.predictor_id)}</span>
+                        <span class="figs">
+                          stakes <strong>{score(r.big_case_score)}</strong>
+                          <span class="sep">·</span>
+                          P(granted) {pct(r.probability)}, called <em>{r.predicted_disposition}</em>
+                          {r.leakage_suspected && <span class="tag warn">leakage flag</span>}
+                          {isCurrent(row, r, ev.event_id) && <span class="tag">counted in mean</span>}
+                        </span>
+                        {r.cell_url && <a class="cell" href={r.cell_url}>prediction ↗</a>}
+                      </div>
+                      {r.big_case_rationale && <p class="why">{r.big_case_rationale}</p>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </details>
+      );
+    })}
+
+    <p class="foot">
+      {board.cases} cases · {board.scored_reads} scored reads
+      {board.rows_with_leakage_flag > 0 && <span> · {board.rows_with_leakage_flag} leakage-flagged</span>}
+      {board.cases_without_score > 0 && <span> · {board.cases_without_score} predicted cases carry no score and are not listed</span>}
+    </p>
+  </section>
+) : (
+  <div class="empty"><p>The big-case board has not been published to the ledger yet.</p></div>
+)}
+
+<style>
+  .board { --score-w: 4.6rem; margin: 1.5rem 0 2rem; font-variant-numeric: tabular-nums; }
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(var(--n), var(--score-w)) 5.4rem;
+    gap: 0 0.5rem;
+    align-items: baseline;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .row.head { font-weight: 560; border-bottom-color: var(--ink); font-size: 0.92rem; }
+  .num { text-align: right; }
+  .mean { font-weight: 560; }
+  .mean small { font-weight: 400; color: var(--muted); font-size: 0.75rem; }
+
+  /* summary as the row: no marker, whole row clickable */
+  summary { cursor: pointer; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary:hover .caption { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 0.15em; }
+  .caption { display: block; padding-left: 1.1rem; position: relative; }
+  .caption::before { content: "›"; position: absolute; left: 0; top: -0.05em; color: var(--muted); transition: transform 0.15s; }
+  details[open] > summary .caption::before { transform: rotate(90deg); }
+  .meta { display: block; padding-left: 1.1rem; margin-top: 0.15rem; }
+  .tag { display: inline-block; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); border: 1px solid var(--rule); border-radius: 3px; padding: 0 0.35em; margin-right: 0.35em; vertical-align: 0.1em; }
+  .tag.warn { color: var(--accent); border-color: var(--accent); }
+
+  .body { padding: 0.6rem 0 1rem 1.1rem; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--accent-soft) 45%, transparent); }
+  .ident { color: var(--muted); font-size: 0.82rem; margin: 0 0 0.6rem; }
+  .event h3 { font-size: 1rem; margin: 0.9rem 0 0.3rem; }
+  .ev-meta { display: block; font-weight: 400; font-size: 0.82rem; color: var(--muted); margin-top: 0.1rem; }
+  .reads { list-style: none; padding: 0; margin: 0 0 0.4rem; }
+  .read { padding: 0.45rem 0 0.45rem 0.7rem; border-left: 2px solid var(--rule); margin: 0.3rem 0; }
+  .read.current { border-left-color: var(--accent); }
+  .read-head { display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; align-items: baseline; font-size: 0.92rem; }
+  .who { font-weight: 560; min-width: 4.5rem; }
+  .figs { color: var(--muted); }
+  .figs strong, .figs em { color: var(--ink); }
+  .sep { margin: 0 0.35em; }
+  .cell { margin-left: auto; font-size: 0.86rem; white-space: nowrap; }
+  .why { margin: 0.25rem 0 0; font-size: 0.92rem; max-width: 60ch; }
+  .foot { color: var(--muted); font-size: 0.86rem; margin-top: 0.8rem; }
+
+  @media (max-width: 560px) {
+    /* stack: caption on its own line, the scores as a labelled strip beneath */
+    .row { grid-template-columns: repeat(var(--n), 1fr) 1.3fr; gap: 0.2rem 0.6rem; font-size: 0.95rem; }
+    .row.head { display: none; }
+    .case { grid-column: 1 / -1; }
+    .num { text-align: left; padding-left: 1.1rem; }
+    .num::before { content: attr(data-label); display: block; font-size: 0.68rem; color: var(--muted); font-family: var(--mono); letter-spacing: 0.02em; }
+    .mean small { display: inline; }
+    .body { padding-left: 0; }
+    .cell { margin-left: 0; }
+  }
+</style>
