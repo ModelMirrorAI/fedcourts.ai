@@ -1,0 +1,19 @@
+# Daily rebuild so the site picks up the latest ledger commit. It never
+# commits here: it only pokes the Cloudflare Pages deploy hook, and Pages
+# runs `npm run build`, whose prebuild step fetches the fedcourtsai tarball.
+name: rebuild
+on:
+  schedule:
+    - cron: "17 11 * * *"   # 11:17 UTC daily, after the fedcourtsai big-cases lane
+  workflow_dispatch:
+permissions: {}
+jobs:
+  poke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloudflare Pages deploy hook
+        env:
+          HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}
+        run: |
+          test -n "$HOOK" || { echo "CLOUDFLARE_DEPLOY_HOOK_URL secret is not set"; exit 1; }
+          curl -fsS -X POST "$HOOK"
