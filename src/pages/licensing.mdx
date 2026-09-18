@@ -1,0 +1,24 @@
+---
+layout: ../layouts/Page.astro
+title: Licensing and data sources
+description: Where the code and data come from and how you may reuse them.
+---
+
+## Code
+
+The pipeline is open source under the BSD 3-Clause License: [ModelMirrorAI/fedcourtsai](https://github.com/ModelMirrorAI/fedcourtsai). This website's source is likewise public.
+
+## The ledger
+
+Predictions, evaluations, and recorded outcomes under `data/` in the repository are published for verification and reuse. Cite the repository and the commit you read from; the commit is what makes a figure checkable. See the repository's `LICENSE` file for the current terms covering data files.
+
+## Sources
+
+- **[CourtListener](https://www.courtlistener.com)**, a project of the [Free Law Project](https://free.law), provides docket data through its REST API. We are grateful for it and encourage anyone using court data to support their work.
+- **[supremecourt.gov](https://www.supremecourt.gov)** provides the live docket channel for pending petitions.
+
+Raw court records are not redistributed by this site; the ledger stores derived judgments and pointers, and the underlying corpus is held privately and refreshed from the sources above.
+
+## Model providers
+
+Predictions are generated using Anthropic, OpenAI, and Google models through their respective APIs and agent tooling. Their appearance here does not imply endorsement.
