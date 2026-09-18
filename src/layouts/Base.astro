@@ -4,10 +4,6 @@ import "../styles/global.css";
 const { title, description = "A public, timestamped ledger of AI predictions about U.S. Supreme Court events.", wide = false } = Astro.props;
 const path = Astro.url.pathname.replace(/\/$/, "") || "/";
 const nav = [
-  ["/how-it-works", "How it works"],
-  ["/ledger", "Ledger"],
-  ["/results", "Results"],
-  ["/research", "Research"],
   ["/about", "About"],
 ];
 const fullTitle = path === "/" ? "FedCourtsAI" : `${title} — FedCourtsAI`;
