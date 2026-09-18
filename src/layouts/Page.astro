@@ -1,0 +1,9 @@
+---
+// Layout for Markdown/MDX pages: frontmatter supplies title/description.
+import Base from "./Base.astro";
+const { frontmatter } = Astro.props;
+---
+<Base title={frontmatter.title} description={frontmatter.description} wide={frontmatter.wide}>
+  <h1>{frontmatter.title}</h1>
+  <slot />
+</Base>
