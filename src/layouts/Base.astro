@@ -1,0 +1,70 @@
+---
+// Shared shell for every page. Pages pass a title and optional description.
+import "../styles/global.css";
+const { title, description = "A public, timestamped ledger of AI predictions about U.S. Supreme Court events.", wide = false } = Astro.props;
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+const nav = [
+  ["/how-it-works", "How it works"],
+  ["/ledger", "Ledger"],
+  ["/results", "Results"],
+  ["/research", "Research"],
+  ["/about", "About"],
+];
+const fullTitle = path === "/" ? "FedCourtsAI" : `${title} — FedCourtsAI`;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#131419" media="(prefers-color-scheme: dark)" />
+    <meta property="og:image" content={new URL("/og.png", Astro.site)} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="color-scheme" content="light dark" />
+  </head>
+  <body>
+    <header class="site-head">
+      <div class="wrap">
+        <a class="brand" href="/">FedCourtsAI</a>
+        <nav aria-label="Site">
+          {nav.map(([href, label]) => (
+            <a href={href} aria-current={path === href ? "page" : undefined}>{label}</a>
+          ))}
+        </nav>
+      </div>
+    </header>
+    <main>
+      <div class:list={["wrap", { wide }]}>
+        <slot />
+      </div>
+    </main>
+    <footer class="site-foot">
+      <div class="wrap">
+        <p>Not legal advice. Outputs are experimental model predictions: they may be wrong, carry no affiliation with or endorsement by any court, and are not a forecast to rely on for any decision. Predictions of how a judge or justice may vote describe likely outcomes, not facts.</p>
+        <p>
+          A project of <a href="https://modelmirror.ai">ModelMirror</a>.
+          <a href="https://github.com/ModelMirrorAI/fedcourtsai">Source and ledger on GitHub</a> ·
+          <a href="https://x.com/ModelMirrorAI">@ModelMirrorAI</a> ·
+          <a href="/privacy">Privacy</a> ·
+          <a href="/terms">Terms</a> ·
+          <a href="/licensing">Licensing &amp; data sources</a>
+        </p>
+      </div>
+    </footer>
+    <!-- Cloudflare Web Analytics: cookieless, no personal data. Paste the beacon snippet
+         from the Cloudflare dashboard here once the site is connected. -->
+  </body>
+</html>
