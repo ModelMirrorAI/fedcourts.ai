@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <title>ModelMirror</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1C1F26"/><stop offset="1" stop-color="#131419"/>
+    </linearGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.46" r="0.7">
+      <stop offset="0" stop-color="#23262F"/><stop offset="1" stop-color="#101116"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#vig)" opacity="0.6"/>
+  <path d="M91 71V596Q70 614 30 628L34 667H260L423 217L563 667H807L801 628Q762 616 740 596V71Q763 50 815 39L808 0H537L541 41Q560 45 572.0 51.0Q584 57 597 71V508H596L434 0H357L179 481H178V71Q201 50 253 39L246 0H30L34 41Q53 45 65.0 51.0Q77 57 91 71Z" transform="translate(74.3,400) scale(0.43,-0.43)" fill="#C9A24B"/>
+</svg>
