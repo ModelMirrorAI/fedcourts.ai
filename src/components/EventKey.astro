@@ -16,7 +16,7 @@ const groups = STAGE_ORDER.map((stage) => ({
 
   <h2>Events</h2>
   <p>
-    An event is one question about one case, asked at one point in time. The id says which. Three stages, each with its own question:
+    An event is one question about one case, asked at one point in time. There are three stages, each with its own question:
   </p>
   <div class="table-scroll">
     <table>
@@ -36,27 +36,7 @@ const groups = STAGE_ORDER.map((stage) => ({
 
   <h2>Why one case has several events</h2>
   <p>
-    The question stays the same within a stage; what is known does not. A petition read at docketing, the same petition after a relist,
-    and the same petition after the Solicitor General weighs in are three different forecasting problems. Each gets its own event,
-    freezes its own snapshot of the docket, and is scored on its own against the same eventual outcome, so an early forecast is never
-    overwritten by a later, better-informed one. A case that is granted then opens a merits event, which asks a new question.
-    Most cases carry one event; only the ones that reach a further moment carry more.
-  </p>
-
-  <h2>The probability and the call</h2>
-  <p>
-    Every prediction states one belief twice. The <strong>probability</strong> is the scored number: P(granted) at cert and interim,
-    P(disturbed) at merits, meaning the judgment below is reversed or vacated, in whole or in part. It is graded by Brier score once the event resolves.
-    The <strong>call</strong> is the single most likely outcome label, from a wider vocabulary
-    (<span class="mono">granted</span>, <span class="mono">denied</span>, <span class="mono">granted-in-part</span>, <span class="mono">gvr</span>,
-    <span class="mono">summary-reversal</span>, <span class="mono">dismissed</span>, <span class="mono">withdrawn</span>), and is checked as a plain hit or miss.
-  </p>
-  <p>
-    So “P(granted) 12%, called <em>denied</em>” is one position, not two: a denial is most likely, and the model puts a grant at about one in eight.
-    Nearly every petition is denied, so nearly every call reads <em>denied</em>; the probability is where the models actually differ.
-    Two wrinkles. At cert, <span class="mono">gvr</span>, <span class="mono">summary-reversal</span> and <span class="mono">granted-in-part</span> all count as grants,
-    so such a call travels with a high probability. At interim, the probability is for an unqualified grant: an order granting relief in part resolves as denied.
-    Merits events carry no call; the forecast there is the judgment and a vote for each Justice, in the linked prediction.
+    We produce predictions for a given outcome at multiple times during the lifecycle of a case. Cases can also move to different stages (e.g. from cert to merits).
   </p>
 </details>
 
