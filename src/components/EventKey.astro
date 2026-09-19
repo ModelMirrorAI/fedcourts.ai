@@ -38,6 +38,17 @@ const groups = STAGE_ORDER.map((stage) => ({
   <p>
     We produce predictions for a given outcome at multiple times during the lifecycle of a case. Cases can also move to different stages (e.g. from cert to merits).
   </p>
+
+    <h2>The probability and the call</h2>
+  <p>
+    Each prediction gives a <strong>probability</strong> and a <strong>call</strong>. The probability is the number we score: the chance
+    of a grant at cert and interim, and the chance the judgment below is reversed or vacated at merits. The call is the single outcome
+    the model thinks most likely, so “P(granted) 12%, called <em>denied</em>” is one position, not two.
+  </p>
+  <p>
+    At cert, calls such as <span class="mono">gvr</span> and <span class="mono">summary-reversal</span> count as grants. At interim, a partial grant counts as a denial.
+    Merits predictions have no call; the predicted judgment and votes are in the linked prediction.
+  </p>
 </details>
 
 <style>
