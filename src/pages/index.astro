@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import BigCaseBoard from "../components/BigCaseBoard.astro";
 import Stamp from "../components/Stamp.astro";
+import EventKey from "../components/EventKey.astro";
 ---
 <Base title="FedCourtsAI" description="Which Supreme Court cases matter, according to three frontier AI models — a public, timestamped ledger of pre-registered predictions." wide>
   <h1>Which cases matter, according to the models</h1>
@@ -18,5 +19,6 @@ import Stamp from "../components/Stamp.astro";
     </small>
   </p>
   <p><Stamp /></p>
+  <EventKey />
   <BigCaseBoard />
 </Base>
