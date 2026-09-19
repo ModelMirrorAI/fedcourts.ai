@@ -5,6 +5,7 @@
 // recomputed here. Rows expand (plain <details>, no JS) to the case's predicted
 // events and every predictor's newest read of each, linked to the committed cell.
 import ledger from "../data/ledger.json";
+import { momentFor } from "../lib/moments.js";
 
 const board = ledger.metrics?.big_cases ?? null;
 const predictors = board?.predictors ?? [];
@@ -59,12 +60,18 @@ const isCurrent = (row, read, eventId) => {
               <span class="mono">{row.case_id}</span>
               {typeof row.score_range === "number" && <span> · panel spread {score(row.score_range)}</span>}
             </p>
-            {(row.events ?? []).map((ev) => (
+            {(row.events ?? []).map((ev) => {
+              // An id outside the register (entry-pinned or legacy) falls back to the cert/interim reading.
+              const mo = momentFor(ev.event_id);
+              const binary = mo?.binary ?? "granted";
+              const hasCall = mo?.hasCall ?? true;
+              return (
               <div class="event">
                 <h3>
                   {ev.title ?? ev.event_id}
                   <span class="ev-meta">
                     <span class="mono">{ev.event_id}</span>
+                    {mo && <span> · {mo.label}, {mo.when}</span>}
                     {ev.actual_disposition
                       ? <span> · resolved {ev.resolved_at ?? ""}: <strong>{ev.actual_disposition}</strong></span>
                       : <span> · pending</span>}
@@ -78,7 +85,7 @@ const isCurrent = (row, read, eventId) => {
                         <span class="figs">
                           stakes <strong>{score(r.big_case_score)}</strong>
                           <span class="sep">·</span>
-                          P(granted) {pct(r.probability)}, called <em>{r.predicted_disposition}</em>
+                          P({binary}) {pct(r.probability)}{hasCall && <Fragment>, called <em>{r.predicted_disposition}</em></Fragment>}
                           {r.leakage_suspected && <span class="tag warn">leakage flag</span>}
                           {isCurrent(row, r, ev.event_id) && <span class="tag">counted in mean</span>}
                         </span>
@@ -89,7 +96,8 @@ const isCurrent = (row, read, eventId) => {
                   ))}
                 </ul>
               </div>
-            ))}
+              );
+            })}
           </div>
         </details>
       );
