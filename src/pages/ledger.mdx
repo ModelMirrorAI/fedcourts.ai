@@ -1,0 +1,63 @@
+---
+layout: ../layouts/Page.astro
+title: Ledger
+description: Every prediction on the public git ledger, with what an entry is and how to check for yourself that it preceded the outcome.
+wide: true
+---
+import ledger from "../data/ledger.json";
+import Stamp from "../components/Stamp.astro";
+import LedgerTable from "../components/LedgerTable.astro";
+
+The ledger is a directory tree in a public repository. Every prediction the models make is a set of files under it, committed to a protected branch by a scheduled workflow, and never edited afterwards. This page lists what is there and explains how to read one entry. The site computes nothing the repository does not already state; it counts files and copies figures.
+
+<p><Stamp /></p>
+
+<dl class="stats">
+  <div class="stat"><span class="n">{ledger.counts.events_with_predictions}</span><span class="l">events with at least one prediction<small>{ledger.counts.events_open} open · {ledger.counts.events_resolved} resolved</small></span></div>
+  <div class="stat"><span class="n">{ledger.counts.predictions}</span><span class="l">predictions<small>{ledger.counts.predictions_frozen} in frozen scope</small></span></div>
+  <div class="stat"><span class="n">{ledger.counts.evaluations}</span><span class="l">gradings<small>{ledger.counts.leaderboard_events_scored} events scored in frozen scope</small></span></div>
+</dl>
+
+## What one entry is
+
+Each predicted event lives at a path that names the court, the docket, and the event:
+
+```
+data/cases/<court>/<docket>/events/<event>/
+  event.yaml                          what is being predicted: stage and decision target
+  outcome.json                        what the Court did, once it has
+  predictions/<model>/<run>/
+    prediction.json                   the probability, the call, and at merits the judgment and votes
+    reasoning.md                      why this number
+    predicted_reasoning.md            what the Court will do, and on what grounds
+    retrieval.md                      what the model consulted beyond the materials it was given
+  evaluations/<evaluator>/<model>/<run>/
+    evaluation.json, evaluation.md    one evaluator's grading of one prediction
+```
+
+The `<run>` segment is a UTC timestamp, so a rerun writes a new directory beside the old one rather than over it. Inside `prediction.json`, the `process_version` block records which frozen process produced the cell and when the harness stamped it. That stamp is written by the runner, not by the model.
+
+## How to check that a prediction preceded an outcome
+
+Take any resolved row below. Its `outcome.json` records when the event resolved; for a cert petition that is the date of the order list. Then:
+
+1. Open the prediction's directory on GitHub and note the `stamped_at` in `prediction.json`.
+2. Open the commit that added the file. On the event's page, use the history for `prediction.json`, or from a clone run `git log --diff-filter=A --format='%H %cI' -- <path>`. The commit landed on `main` through a pull request; the merge time is on the pull request page.
+3. Open the workflow run linked from that pull request. Its start and end times bound when the model was actually running.
+4. Compare all three against the order list on supremecourt.gov for the conference in question.
+
+Three clocks the model cannot write (the harness stamp, the pull request merge, the workflow run) should all sit before the outcome, and they should agree with each other to within the run's duration. If they do not, that is worth an [issue](https://github.com/ModelMirrorAI/fedcourtsai/issues).
+
+Be clear about what this shows and what it does not. It shows that a specific prediction was public, in this form, before the Court acted. It does not show that the model had no way of knowing the outcome: a petition already granted quietly, a commentator who guessed right, an order the model found by searching. Those are leakage questions, and the evaluator reads each prediction's retrieval record for them after the event resolves. A prediction found to have leaned on the outcome is excluded and marked, not deleted.
+
+## Frozen and shakedown
+
+Predictions made before the process was frozen on {ledger.frozen_process.since ? ledger.frozen_process.since.slice(0, 10) : "the freeze date"} stay on the ledger with their timestamps. They were made while the prompts and configuration were still moving, so nothing about them was pre-registered, and no reported figure includes them. The table marks them as shakedown. Only frozen-scope events reach the results.
+
+## Every predicted event
+
+<LedgerTable />
+
+<p><small>
+  The probability, the call, and the reasoning behind each prediction are in the linked directory. This table lists what has been committed and when; it does not summarise the forecasts, and it is not a scoreboard.
+</small></p>
