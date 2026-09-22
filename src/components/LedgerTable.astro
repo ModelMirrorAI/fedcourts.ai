@@ -1,0 +1,71 @@
+---
+// Every event carrying at least one forward prediction, newest first, from
+// the build-time ledger.json. Server-rendered, no client JS. Each row links
+// to the event's directory at the exact commit this build read, so a reader
+// lands on the same files the site counted.
+import ledger from "../data/ledger.json";
+import { momentFor } from "../lib/moments.js";
+
+const { rows, source, frozen_process } = ledger;
+const base = source.sha
+  ? `https://github.com/${source.repo}/tree/${source.sha}/`
+  : `https://github.com/${source.repo}/tree/${source.branch}/`;
+
+const day = (iso) => (iso ? iso.slice(0, 10) : "");
+const shortId = (id) => id.replace(/-baseline$/, "");
+const caseLabel = (r) => r.title ?? `${r.court}/${r.docket}`;
+---
+{rows.length === 0 ? (
+  <div class="empty">
+    <p>The ledger read for this build carried no forward predictions.</p>
+  </div>
+) : (
+  <div class="table-scroll">
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Event</th>
+          <th>Predicted by</th>
+          <th>First committed</th>
+          <th>Scope</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => {
+          const moment = momentFor(r.event_id);
+          return (
+            <tr>
+              <td class="case">
+                <a href={base + r.path}>{caseLabel(r)}</a>
+                {r.title && <small class="mono">{r.court}/{r.docket}</small>}
+              </td>
+              <td class="mono evt" title={moment ? `${moment.label}: ${moment.when}` : undefined}>{r.event_id}</td>
+              <td>{r.predictors.map(shortId).join(", ")}<small>{r.predictors.length} of 3</small></td>
+              <td class="mono">{day(r.first_predicted_at)}</td>
+              <td>{r.frozen ? "frozen" : <span class="muted">shakedown</span>}</td>
+              <td>
+                {r.resolved
+                  ? <>resolved<small>{r.actual_disposition ?? ""}{r.resolved_at ? ` · ${day(r.resolved_at)}` : ""}{r.evaluations ? ` · ${r.evaluations} gradings` : ""}</small></>
+                  : "open"}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+)}
+<p><small>
+  Scope is <em>frozen</em> when every prediction on the event carries a process stamp at or after the freeze instant
+  {frozen_process.since ? ` (${day(frozen_process.since)})` : ""}; otherwise the event is <em>shakedown</em> and nothing is claimed from it.
+  Links open the event's directory at the commit this build read.
+</small></p>
+
+<style>
+  .ledger td small { display: block; color: var(--muted); font-size: 0.8rem; }
+  .ledger td.case a { color: var(--ink); }
+  .ledger td.evt { white-space: normal; overflow-wrap: anywhere; max-width: 16rem; }
+  .muted { color: var(--muted); }
+</style>
