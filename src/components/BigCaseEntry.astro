@@ -1,0 +1,94 @@
+---
+// One board row: the case, each model's current big-case score and the panel
+// average; expands to the case's predicted events and every model's newest
+// read of each. Styled by BigCaseBoard.astro (global styles under .board).
+import ledger from "../data/ledger.json";
+import { momentFor, plainCall, plainOutcome } from "../lib/moments.js";
+
+const { row } = Astro.props;
+const predictors = ledger.metrics?.big_cases?.predictors ?? [];
+
+const shortName = (id) => {
+  const base = id.replace(/-baseline$/, "");
+  return base.charAt(0).toUpperCase() + base.slice(1);
+};
+const score = (x) => (typeof x === "number" ? x.toFixed(2) : "—");
+const pct = (x) => (typeof x === "number" ? `${Math.round(x * 100)}%` : "—");
+const day = (iso) => (iso ? String(iso).slice(0, 10) : "");
+const statusLabel = { pending: "awaiting the Court", partly_resolved: "partly decided", resolved: "decided" };
+const reads = new Map((row.current_reads ?? []).map((r) => [r.predictor_id, r]));
+const isCurrent = (read, eventId) => {
+  const c = reads.get(read.predictor_id);
+  return Boolean(c && c.event_id === eventId && c.run_id === read.run_id);
+};
+---
+<details class="entry">
+  <summary class="row">
+    <div class="case">
+      <span class="caption">{row.caption ?? row.case_id}</span>
+      <span class="meta">
+        <span class="tag">{statusLabel[row.status] ?? row.status}</span>
+        {row.leakage_suspected && <a class="tag warn" href="#possible-leak">possible leak</a>}
+      </span>
+    </div>
+    {predictors.map((p) => {
+      const r = reads.get(p);
+      return <div class="num" data-label={shortName(p)}>{r ? score(r.big_case_score) : "—"}</div>;
+    })}
+    <div class="num mean" data-label="Average">
+      {score(row.mean_big_case_score)}
+      {row.n < predictors.length && <small> {row.n} of {predictors.length} models</small>}
+      {typeof row.mean_big_case_score === "number" && (
+        <span class="bar" aria-hidden="true"><span style={`width:${Math.round(row.mean_big_case_score * 100)}%`}></span></span>
+      )}
+    </div>
+  </summary>
+
+  <div class="body">
+    <p class="ident">
+      <span class="full">{row.caption}</span>
+      <span class="mono">{row.case_id}</span>
+      {typeof row.score_range === "number" && <span> · models differ by up to {score(row.score_range)}</span>}
+    </p>
+    {(row.events ?? []).map((ev) => {
+      // An id outside the register (entry-pinned or legacy) falls back to the cert reading.
+      const mo = momentFor(ev.event_id);
+      const stage = mo?.stage ?? "cert";
+      const chance = mo?.chance ?? "Chance the Court takes the case";
+      const hasCall = mo?.hasCall ?? true;
+      return (
+      <div class="event">
+        <h3>
+          {mo?.question ?? ev.title ?? ev.event_id}
+          <span class="ev-meta">
+            {mo && <span>Predicted {mo.when}. </span>}
+            {ev.actual_disposition
+              ? <span>Decided {day(ev.resolved_at)}: the Court <strong>{plainOutcome(stage, ev.actual_disposition)}</strong>.</span>
+              : <span>Awaiting the Court.</span>}
+            <span class="mono"> {ev.event_id}</span>
+          </span>
+        </h3>
+        <ul class="reads">
+          {(ev.reads ?? []).map((r) => (
+            <li class:list={["read", { current: isCurrent(r, ev.event_id) }]}>
+              <div class="read-head">
+                <span class="who">{shortName(r.predictor_id)}</span>
+                <span class="figs">
+                  Big-case score <strong>{score(r.big_case_score)}</strong>
+                  <span class="sep">·</span>
+                  {chance}: <strong>{pct(r.probability)}</strong>
+                  {hasCall && <Fragment><span class="sep">·</span>Prediction: <em>{plainCall(stage, r.predicted_disposition)}</em></Fragment>}
+                  {r.leakage_suspected && <a class="tag warn" href="#possible-leak">possible leak</a>}
+                  {isCurrent(r, ev.event_id) && <span class="tag">used in average</span>}
+                </span>
+                {r.cell_url && <a class="cell" href={r.cell_url}>full prediction on GitHub ↗</a>}
+              </div>
+              {r.big_case_rationale && <p class="why">{r.big_case_rationale}</p>}
+            </li>
+          ))}
+        </ul>
+      </div>
+      );
+    })}
+  </div>
+</details>

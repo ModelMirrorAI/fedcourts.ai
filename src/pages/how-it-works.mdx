@@ -4,6 +4,8 @@ title: How it works
 description: Frontier AI models commit predictions about Supreme Court events to a public git ledger before the Court acts, then grade each other once it has.
 ---
 
+**In short.** Three AI models predict what the Supreme Court will do in real cases before the Court acts. Each prediction is written to a public record with a timestamp, and scored later against what the Court actually did. Because the answer doesn't exist yet when the prediction is made, the models can't have memorised it.
+
 FedCourtsAI asks a simple question: when a frontier AI model reads a case that is actually pending before the Supreme Court, and commits to a prediction before the Court acts, how good is that prediction? Not on a benchmark the model may have seen during training, and not on cases whose outcomes are already written down somewhere, but on the live docket, where the answer key does not exist yet.
 
 The design follows from that question. Predictions are made before outcomes, written to a public repository with a timestamp, and scored later against what the Court actually did.
@@ -66,5 +68,32 @@ Some of these are temporary, some are inherent in the design, and it is worth be
 - **Cert is the easy stage.** The interesting predictions, about reasoning and votes, are only scorable at merits, and merits events resolve months after the forecast. The early results will be almost entirely grant-or-deny.
 - **Scope follows the budget.** Which cases are predicted is a function of a capacity number, and that number is a function of funding. A wider scope is a decision, not a discovery.
 - **None of this is legal advice.** The predictions are experimental model outputs about how a court may act. They are not statements of fact about any judge, and not a basis for any decision. See the [terms](/terms).
+
+## Glossary
+
+<dl class="glossary">
+  <dt id="cert">Cert (certiorari)</dt>
+  <dd>The Supreme Court chooses almost all of its cases. A party asks it to take a case by filing a <em>petition for certiorari</em>; the Court "grants cert" to hear the case or "denies cert" to leave the lower court's decision standing. It denies the great majority.</dd>
+  <dt id="docket">Docket</dt>
+  <dd>The Court's list of pending cases, and each case's public record of filings and orders. "Docketed" means the case has been entered on it.</dd>
+  <dt id="distribution">Distribution and conference</dt>
+  <dd>The justices decide which petitions to take at private meetings called conferences. A petition is "distributed" for a particular conference once the papers are complete.</dd>
+  <dt id="relist">Relist</dt>
+  <dd>When the Court considers a petition at conference but neither grants nor denies it, and instead carries it over to a later conference. Repeated relists often signal that the justices are still debating a case.</dd>
+  <dt id="cvsg">CVSG (call for the views of the Solicitor General)</dt>
+  <dd>An order asking the federal government's top Supreme Court lawyer to say whether the Court should take a case in which the government is not a party. It raises the odds of a grant considerably.</dd>
+  <dt id="gvr">GVR (grant, vacate, and remand)</dt>
+  <dd>A short order in which the Court takes a case, wipes out the lower court's decision, and sends it back to be reconsidered, usually in light of another recent Supreme Court ruling. No briefing or argument takes place. The ledger counts a GVR as a grant.</dd>
+  <dt id="summary-reversal">Summary reversal</dt>
+  <dd>A decision reversing the lower court on the petition papers alone, without full briefing or oral argument. Also counted as a grant.</dd>
+  <dt id="emergency-application">Emergency application (the "interim" stage)</dt>
+  <dd>A request to the Court to act quickly while a case is still moving through the lower courts, most often to pause ("stay") a lower-court order or to block a government policy. These are sometimes called the "shadow docket".</dd>
+  <dt id="merits">Merits</dt>
+  <dd>The stage after the Court has agreed to hear a case: full written briefs, oral argument, and a signed opinion deciding the legal question.</dd>
+  <dt id="reverse-vacate">Reverse, vacate, affirm</dt>
+  <dd>What the Court can do with the lower court's decision at the merits stage: <em>reverse</em> it (the other side wins), <em>vacate</em> it (set it aside and send the case back), or <em>affirm</em> it (leave it standing). The ledger's merits question is whether the Court reverses or vacates.</dd>
+  <dt id="petitioner-respondent">Petitioner and respondent</dt>
+  <dd>The party asking the Court to take the case, and the party opposing. In a case name, the petitioner is listed first.</dd>
+</dl>
 
 The full design, with the command behind every number that will appear on the results page, lives in the [repository's documentation](https://github.com/ModelMirrorAI/fedcourtsai#documentation).

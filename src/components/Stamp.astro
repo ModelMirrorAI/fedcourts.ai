@@ -1,8 +1,10 @@
 ---
-// "ledger <sha> · <time>": the exact fedcourtsai commit this build read.
+// "Updated <date> · ledger commit <sha>": the exact fedcourtsai commit this build read.
 import ledger from "../data/ledger.json";
 const { sha, committed_at, repo } = ledger.source;
 const short = sha ? sha.slice(0, 7) : "unknown";
-const when = committed_at ? committed_at.slice(0, 10) : "";
+const when = committed_at
+  ? new Date(committed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+  : "";
 ---
-<span class="stamp">ledger {sha ? <a href={`https://github.com/${repo}/commit/${sha}`}>{short}</a> : short}{when && ` · ${when}`}</span>
+<span class="stamp">{when && `Updated ${when} · `}ledger commit {sha ? <a href={`https://github.com/${repo}/commit/${sha}`}>{short}</a> : short}</span>

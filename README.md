@@ -19,14 +19,6 @@ The public site for [FedCourtsAI](https://github.com/ModelMirrorAI/fedcourtsai).
 
 Import them at the top of a page: `import Stats from "../components/Stats.astro";`
 
-## One-time setup
-
-1. Create the repo (public), push this tree, protect `main` (require PR, block force-push and deletion).
-2. **Cloudflare Pages → Create → connect to Git → this repo.** Framework preset *Astro*, build command `npm run build`, output directory `dist`, environment variable `NODE_VERSION=22`. Set the production branch to `main`; preview deployments for all other branches.
-3. In the Pages project, **Settings → Builds → Deploy hooks → Add**. Copy the URL into a repo secret named `CLOUDFLARE_DEPLOY_HOOK_URL`.
-4. Add the custom domain `fedcourts.ai` (and `www` redirect) in Pages.
-5. **Cloudflare Web Analytics**: enable it for the site and paste the beacon `<script>` into `src/layouts/Base.astro` where the comment marks the spot.
-
 ## Local build (optional)
 
 ```bash
