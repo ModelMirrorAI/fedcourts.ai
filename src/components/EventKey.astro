@@ -1,6 +1,6 @@
 ---
-// The key to an expanded board row: what each event id is, why one case carries
-// several, and how the probability and the call relate. Static copy over the
+// The key to the board: what the score is, how far to trust the ranking, what an
+// expanded case shows, and what a "possible leak" tag means. Static copy over the
 // moment register in src/lib/moments.js. Collapsed by default so the board stays
 // near the top of the page.
 import { MOMENTS, STAGES, STAGE_ORDER } from "../lib/moments.js";
@@ -11,43 +11,65 @@ const groups = STAGE_ORDER.map((stage) => ({
   events: Object.entries(MOMENTS).filter(([, v]) => v.stage === stage),
 }));
 ---
-<details class="key" id="reading-a-case">
-  <summary>How to read an expanded case</summary>
+<details class="key" id="reading-the-board">
+  <summary>How to read this board</summary>
 
-  <h2>Events</h2>
+  <h2>The big-case score</h2>
   <p>
-    An event is one question about one case, asked at one point in time. There are three stages, each with its own question:
+    Each model gives every case it predicts a score from 0 to 1 for how much the case matters: 0 is a routine
+    petition, 1 is a landmark. The <strong>Average</strong> column is the mean of the models' scores, and the
+    board is sorted by it. The score is a pre-registered opinion, not a forecast: it says nothing about whether the
+    Court will take the case, and it is never marked right or wrong. It is graded later by a separate evaluator
+    for the quality of its reasoning.
+  </p>
+  <p>
+    Treat the order as rough. Neighbouring rows usually sit closer together than the three models sit to each
+    other within a single row, so the gap between two adjacent ranks is smaller than the disagreement it is built
+    from. Rows are also not strictly comparable when they answer different questions: the models tend to read
+    stakes higher once a case reaches the merits than at the petition stage.
+  </p>
+  <p>
+    Where the average says "2 of 3 models", one model has not yet predicted the case's current stage; its earlier
+    read is shown inside the case but not averaged in. Scored forecasts, as opposed to these opinions, live
+    on the <a href="https://github.com/ModelMirrorAI/fedcourtsai/blob/main/metrics/README.md">leaderboard in the repository</a>.
+  </p>
+
+  <h2>What an expanded case shows</h2>
+  <p>
+    A case can be predicted several times as it moves through the Court, and each prediction answers one question
+    asked at one point in time. There are three stages, each with its own question. Under each question, the board
+    lists every model's newest prediction: its big-case score, the probability it gave, and (at the first two stages)
+    the single outcome it thought most likely. The probability is what gets scored, so "chance the Court takes the
+    case: 12%, prediction: turn it down" is one position, not two.
   </p>
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>Event</th><th>Forecast taken</th></tr>
+        <tr><th>Prediction made</th><th>Ledger event id</th></tr>
       </thead>
       {groups.map((g) => (
         <tbody>
-          <tr class="stage"><th colspan="2">{g.label} — {g.question}</th></tr>
+          <tr class="stage"><th colspan="2">{g.question}</th></tr>
           {g.events.map(([id, v]) => (
-            <tr><td class="mono">{id}</td><td>{v.when}</td></tr>
+            <tr><td>{v.when.charAt(0).toUpperCase() + v.when.slice(1)}</td><td class="mono">{id}</td></tr>
           ))}
         </tbody>
       ))}
     </table>
   </div>
-
-  <h2>Why one case has several events</h2>
   <p>
-    We produce predictions for a given outcome at multiple times during the lifecycle of a case. Cases can also move to different stages (e.g. from cert to merits).
+    At the petition stage, "send it back for reconsideration" (a <a href="/how-it-works#gvr">GVR</a>) and "reverse
+    without hearing argument" both count as the Court taking the case. For an emergency application, a partial grant
+    counts as a denial. At the merits stage there is no single most-likely outcome to show; the predicted judgment and
+    vote are in the linked prediction. Terms are explained in the <a href="/how-it-works#glossary">glossary</a>.
   </p>
 
-  <h2>The probability and the call</h2>
+  <h2 id="possible-leak">"Possible leak"</h2>
   <p>
-    Each prediction gives a <strong>probability</strong> and a <strong>call</strong>. The probability is the number we score: the chance
-    of a grant at cert and interim, and the chance the judgment below is reversed or vacated at merits. The call is the single outcome
-    the model thinks most likely, so “P(granted) 12%, called <em>denied</em>” is one position, not two.
-  </p>
-  <p>
-    At cert, calls such as <span class="mono">gvr</span> and <span class="mono">summary-reversal</span> count as grants. At interim, a partial grant counts as a denial.
-    Merits predictions have no call; the predicted judgment and votes are in the linked prediction.
+    Models are free to search the web when they predict, and afterwards an evaluator reads what each one looked at.
+    A prediction is tagged <span class="tag warn">possible leak</span> when the evaluator found signs that the model may
+    have seen how the case turned out before predicting it. The tag is a warning about that one prediction, not about
+    the case. A case carries the tag when one of the predictions in its average does.
   </p>
 </details>
 
@@ -61,5 +83,6 @@ const groups = STAGE_ORDER.map((stage) => ({
   .key table { max-width: var(--measure); }
   .key .table-scroll table { min-width: 0; }
   .key tr.stage th { font-weight: 560; font-size: 0.86rem; color: var(--muted); border-bottom-color: var(--rule); padding-top: 0.9rem; }
-  .key td.mono { white-space: normal; overflow-wrap: anywhere; padding-right: 1rem; }
+  .key td.mono { white-space: normal; overflow-wrap: anywhere; font-size: 0.8rem; color: var(--muted); }
+  .key .tag { display: inline-block; font-family: var(--mono); font-size: 0.7rem; border: 1px solid var(--accent); color: var(--accent); border-radius: 3px; padding: 0 0.35em; }
 </style>
