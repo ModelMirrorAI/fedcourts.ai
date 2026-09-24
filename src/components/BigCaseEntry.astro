@@ -17,6 +17,14 @@ const pct = (x) => (typeof x === "number" ? `${Math.round(x * 100)}%` : "—");
 const day = (iso) => (iso ? String(iso).slice(0, 10) : "");
 const statusLabel = { pending: "awaiting the Court", partly_resolved: "partly decided", resolved: "decided" };
 const reads = new Map((row.current_reads ?? []).map((r) => [r.predictor_id, r]));
+
+// The case's newest plain-language summary, if the ledger has one (docs/case-summaries.md).
+const summary = ledger.summaries?.[row.case_id] ?? null;
+const MODEL_NAMES = { "claude-sonnet-5": "Claude Sonnet 5" };
+const modelName = (id) => MODEL_NAMES[id] ?? id;
+const longDate = (d) =>
+  d ? new Date(`${String(d).slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "";
+const repo = ledger.source?.repo ?? "ModelMirrorAI/fedcourtsai";
 const isCurrent = (read, eventId) => {
   const c = reads.get(read.predictor_id);
   return Boolean(c && c.event_id === eventId && c.run_id === read.run_id);
@@ -50,6 +58,23 @@ const isCurrent = (read, eventId) => {
       <span class="mono">{row.case_id}</span>
       {typeof row.score_range === "number" && <span> · models differ by up to {score(row.score_range)}</span>}
     </p>
+    {summary && (
+      <section class="summary" aria-label="Case summary">
+        {summary.sections.map((sec) => (
+          <Fragment>
+            <h3>{sec.heading}</h3>
+            {sec.paragraphs.map((para) => <p>{para}</p>)}
+          </Fragment>
+        ))}
+        <p class="provenance">
+          Plain-language summary written by {modelName(summary.model)} from the Court's docket and filings
+          as of {longDate(summary.snapshot)}. It is AI-generated and can contain mistakes.
+          <a href="/how-it-works#case-summaries">About these summaries</a> ·
+          <a href={`https://github.com/${repo}/blob/main/${summary.path}`}>source file ↗</a>
+        </p>
+      </section>
+    )}
+    {summary && <h3 class="predictions-head">The models' predictions</h3>}
     {(row.events ?? []).map((ev) => {
       // An id outside the register (entry-pinned or legacy) falls back to the cert reading.
       const mo = momentFor(ev.event_id);
