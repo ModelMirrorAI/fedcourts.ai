@@ -23,7 +23,30 @@ const TARBALL = `https://codeload.github.com/${REPO}/tar.gz/refs/heads/${BRANCH}
 const COMMITS_FEED = `https://github.com/${REPO}/commits/${BRANCH}.atom`;
 const OUT = new URL("../src/data/ledger.json", import.meta.url);
 
-const WANT = /^[^/]+\/(metrics\/[^/]+\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json))$/;
+const WANT = /^[^/]+\/(metrics\/[^/]+\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
+
+// A case summary (docs/case-summaries.md in the ledger repo): YAML front matter
+// written by the harness, then exactly three "## " sections of plain prose. The
+// harness rejects any markup, so the body is carried as text and rendered escaped.
+function parseSummary(text) {
+  const m = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!m) return null;
+  const front = YAML.parse(m[1]) ?? {};
+  const sections = [];
+  for (const block of m[2].split(/^## /m).slice(1)) {
+    const [heading, ...rest] = block.split("\n");
+    const paragraphs = rest.join("\n").split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+    if (heading.trim() && paragraphs.length) sections.push({ heading: heading.trim(), paragraphs });
+  }
+  if (sections.length === 0) return null;
+  return {
+    case_id: front.case_id ?? null,
+    snapshot: front.snapshot ? String(front.snapshot) : null,
+    model: front.model ?? null,
+    generated_at: front.generated_at ? String(front.generated_at) : null,
+    sections,
+  };
+}
 
 async function headCommit() {
   try {
@@ -62,9 +85,19 @@ async function main() {
 
     // --- walk the case tree ---
     const events = new Map();
+    const summaries = {};
     const base = join(dir, "data", "cases");
     for await (const f of glob("**/*", { cwd: base })) {
       const parts = f.split(sep);
+      // <court>/<docket>/summaries/<YYYY-MM-DD>.md — keep each case's newest.
+      if (parts.length === 4 && parts[2] === "summaries" && parts[3].endsWith(".md")) {
+        const caseId = `${parts[0]}/${parts[1]}`;
+        const day = parts[3].slice(0, -3);
+        if (summaries[caseId] && summaries[caseId].snapshot >= day) continue;
+        const parsed = parseSummary(await readFile(join(base, f), "utf8"));
+        if (parsed) summaries[caseId] = { ...parsed, snapshot: parsed.snapshot ?? day, path: `data/cases/${caseId}/summaries/${parts[3]}` };
+        continue;
+      }
       // <court>/<docket>/events/<event>/...
       if (parts.length < 5 || parts[2] !== "events") continue;
       const key = parts.slice(0, 4).join("/");
@@ -137,11 +170,12 @@ async function main() {
       },
       predictors,
       rows,
+      summaries,
       metrics: { leaderboard: metrics.leaderboard, big_cases: metrics["big-cases"], statpack_terms: metrics.statpack?.interim?.terms ?? null },
     };
     await mkdir(dirname(fileURLToPath(OUT)), { recursive: true });
     await writeFile(OUT, JSON.stringify(out, null, 1));
-    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), sha ${head.sha ?? "unknown"}`);
+    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${Object.keys(summaries).length} case summaries, sha ${head.sha ?? "unknown"}`);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
