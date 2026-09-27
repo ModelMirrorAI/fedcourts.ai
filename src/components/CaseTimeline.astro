@@ -1,0 +1,129 @@
+---
+// Where a case stands at the Court, drawn from the events the board already
+// carries — nothing here is fetched or inferred beyond the moment register.
+// Each step the models predicted at is a <label> for one of the entry's radio
+// inputs (`pick`), so clicking it switches which predictions the entry shows.
+// Steps without predictions are plain markers. The decision step at the end of
+// each track says, in general terms, what each outcome would mean.
+import { momentFor } from "../lib/moments.js";
+
+const { events = [], ids = [] } = Astro.props;
+
+const longDate = (d) =>
+  d ? new Date(`${String(d).slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "";
+
+// Each predicted event, with its radio id and position (1-based) for the CSS.
+const byId = new Map(events.map((ev, i) => [ev.event_id, { ev, id: ids[i], k: i + 1 }]));
+const stageOf = (ev) => momentFor(ev.event_id)?.stage ?? "cert";
+const stages = new Set(events.map(stageOf));
+
+// The newest resolved event at a stage: its disposition is the stage's outcome.
+const outcomeAt = (stage) =>
+  [...events].reverse().find((ev) => stageOf(ev) === stage && ev.actual_disposition) ?? null;
+
+const certOutcome = outcomeAt("cert");
+const certTaken = stages.has("merits") || certOutcome?.actual_disposition === "granted";
+
+const CERT_WORDS = { granted: "Took the case", denied: "Turned it down", gvr: "Sent it back (GVR)", "summary-reversal": "Reversed without argument", dismissed: "Dismissed" };
+const INTERIM_WORDS = { granted: "Granted", denied: "Denied", dismissed: "Dismissed" };
+const MERITS_WORDS = { disturbed: "Reversed or vacated", affirmed: "Affirmed", dismissed: "Dismissed" };
+
+// A track is a list of steps; `optional` steps appear only when predicted.
+const tracks = [];
+if (stages.has("interim")) {
+  const out = outcomeAt("interim");
+  tracks.push({
+    name: "Emergency application",
+    steps: [
+      { event: "evt-motion-disposition", label: "Application filed" },
+      { event: "evt-order-response-requested-disposition", label: "Response requested", optional: true },
+      { event: "evt-brief-response-disposition", label: "Response filed", optional: true },
+      {
+        decision: true, label: "Court rules",
+        outcome: out && (INTERIM_WORDS[out.actual_disposition] ?? out.actual_disposition), date: out?.resolved_at,
+        fork: [["grants it", "the applicant gets the temporary relief it asked for"], ["denies it", "the lower court's order stands for now"]],
+      },
+    ],
+  });
+}
+if (stages.has("cert") || stages.has("merits")) {
+  tracks.push({
+    name: "Petition",
+    steps: [
+      { event: "evt-petition-arrival-disposition", label: "Petition filed" },
+      { event: "evt-petition-disposition", label: "Sent to conference" },
+      { event: "evt-order-cvsg-disposition", label: "Government's views requested", optional: true },
+      {
+        decision: true, label: "Court decides",
+        outcome: stages.has("merits") ? CERT_WORDS.granted : certOutcome && (CERT_WORDS[certOutcome.actual_disposition] ?? certOutcome.actual_disposition),
+        date: certOutcome?.resolved_at,
+        fork: [["takes the case", "briefing, argument, and a decision follow"], ["turns it down", "the lower court's ruling stands"]],
+      },
+    ],
+  });
+}
+if (certTaken) {
+  const out = outcomeAt("merits");
+  tracks.push({
+    name: "Merits",
+    steps: [
+      { event: "evt-order-judgment", label: "Briefing" },
+      { event: "evt-brief-judgment", label: "Briefs in", optional: true },
+      { label: "Argued" },
+      {
+        decision: true, label: "Decided",
+        outcome: out && (MERITS_WORDS[out.actual_disposition] ?? out.actual_disposition), date: out?.resolved_at,
+        fork: [["affirms", "the lower court's ruling stands"], ["reverses or vacates", "the ruling is overturned or sent back"]],
+      },
+    ],
+  });
+}
+
+// Resolve each track: drop unpredicted optional steps, attach the predicted
+// event, and mark every step up to the furthest one reached as done.
+const rendered = tracks.map((t) => {
+  const steps = t.steps
+    .filter((s) => !s.optional || byId.has(s.event))
+    .map((s) => ({ ...s, pick: s.event ? byId.get(s.event) ?? null : null }));
+  let reached = -1;
+  steps.forEach((s, i) => { if (s.pick || (s.decision && s.outcome)) reached = i; });
+  return { ...t, steps: steps.map((s, i) => ({ ...s, done: i <= reached, now: i === reached && !s.decision })) };
+});
+---
+{rendered.length > 0 && (
+  <div class="timeline" aria-label="Where the case stands">
+    {rendered.map((t) => (
+      <div class="track">
+        {rendered.length > 1 && <p class="track-name">{t.name}</p>}
+        <ol>
+          {t.steps.map((s) => {
+            const date = s.pick ? longDate(s.pick.ev.opened_at) : s.decision ? longDate(s.date) : "";
+            const inner = (
+              <Fragment>
+                <span class="dot" aria-hidden="true"></span>
+                <span class="step-label">{s.label}</span>
+                {s.decision && s.outcome && <span class="step-outcome">{s.outcome}</span>}
+                {date && <span class="step-date">{date}</span>}
+                {s.pick && <span class="step-pred">predicted</span>}
+              </Fragment>
+            );
+            return (
+              <li class:list={["step", { done: s.done, now: s.now, decision: s.decision, predicted: s.pick }]}>
+                {s.pick
+                  ? <label for={s.pick.id} data-k={s.pick.k}>{inner}</label>
+                  : <div>{inner}</div>}
+              </li>
+            );
+          })}
+        </ol>
+        {t.steps.filter((s) => s.decision && !s.outcome).map((s) => (
+          <p class="fork">
+            {s.fork.map(([what, means], i) => (
+              <span>{i > 0 && <span class="sep"> · </span>}If the Court <strong>{what}</strong>: {means}.</span>
+            ))}
+          </p>
+        ))}
+      </div>
+    ))}
+  </div>
+)}
