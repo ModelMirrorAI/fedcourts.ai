@@ -37,7 +37,15 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
 ---
 {board ? (
   <section class="board" style={`--n:${predictors.length}`}>
-    <p class="scale">Big-case score · 0 = routine, 1 = landmark</p>
+    <div class="board-tools">
+      <div class="search" hidden>
+        <label for="case-search">Find a case</label>
+        <input id="case-search" type="search" autocomplete="off" spellcheck="false"
+          placeholder="Party name, docket number, or topic" aria-describedby="case-search-status" />
+        <p id="case-search-status" class="search-status" aria-live="polite"></p>
+      </div>
+      <p class="scale">Big-case score · 0 = routine, 1 = landmark</p>
+    </div>
     <div class="row head" role="row">
       <div class="case">Case</div>
       {predictors.map((p) => <div class="num" title={p}>{shortName(p)}</div>)}
@@ -52,6 +60,7 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
       </details>
     )}
 
+    <p class="no-match" hidden>No cases on the board match that search. The board lists only cases the models have predicted and scored; the <a href="/ledger">ledger</a> has every predicted event.</p>
     <p class="foot">
       {board.cases} cases · {board.scored_reads} scores
       {board.rows_with_leakage_flag > 0 && <span> · {board.rows_with_leakage_flag} with a <a href="#possible-leak">possible leak</a></span>}
@@ -62,10 +71,76 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
   <div class="empty"><p>The big-case board has not been published to the ledger yet.</p></div>
 )}
 
+<script>
+  // Case search: progressive enhancement over the static board. Without
+  // JavaScript the box stays hidden and the board is unchanged. Every word
+  // typed must appear in the case's name, docket numbers, topic, or summary;
+  // matches keep the board's order. The query is kept in ?q= so a search can
+  // be linked to.
+  const board = document.querySelector(".board");
+  const box = board?.querySelector(".search");
+  const input = board?.querySelector("#case-search");
+  if (board && box && input) {
+    const norm = (t) => (t ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9-]+/g, " ");
+    const entries = [...board.querySelectorAll("details.entry")].map((el) => ({
+      el,
+      text: " " + norm([
+        el.querySelector(".caption")?.textContent,
+        el.dataset.case, el.dataset.case?.split("/")[1], el.dataset.docket,
+        ...[...el.querySelectorAll(".tag.topic, .ident a")].map((t) => t.textContent),
+        el.querySelector(".summary .cols")?.textContent,
+      ].join(" ")) + " ",
+    }));
+    const fold = board.querySelector("details.fold");
+    const status = board.querySelector("#case-search-status");
+    const none = board.querySelector(".no-match");
+    let foldWasOpen = fold?.open ?? false;
+    let active = false;
+
+    const run = () => {
+      const terms = norm(input.value).split(" ").filter(Boolean);
+      const on = terms.length > 0;
+      if (on && !active && fold) foldWasOpen = fold.open;
+      let n = 0;
+      for (const { el, text } of entries) {
+        const hit = !on || terms.every((t) => text.includes(t));
+        el.hidden = !hit;
+        if (hit) n++;
+      }
+      board.classList.toggle("searching", on);
+      if (fold) fold.open = on ? true : foldWasOpen;
+      none.hidden = !on || n > 0;
+      status.textContent = on ? (n === 1 ? "1 case matches" : `${n} cases match`) : "";
+      active = on;
+      const url = new URL(location.href);
+      if (on) url.searchParams.set("q", input.value.trim()); else url.searchParams.delete("q");
+      history.replaceState(null, "", url);
+    };
+
+    box.hidden = false;
+    input.addEventListener("input", run);
+    input.addEventListener("keydown", (e) => { if (e.key === "Escape" && input.value) { input.value = ""; run(); } });
+    const q = new URLSearchParams(location.search).get("q");
+    if (q) { input.value = q; run(); }
+  }
+</script>
+
 <style is:global set:html={pickCss}></style>
 <style is:global>
   .board { --score-w: 4.6rem; margin: 1.5rem 0 2rem; font-variant-numeric: tabular-nums; }
-  .board .scale { color: var(--muted); font-size: 0.86rem; margin: 0 0 0.3rem; text-align: right; }
+  .board .board-tools { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.4rem 1.5rem; margin: 0 0 0.3rem; }
+  .board .scale { color: var(--muted); font-size: 0.86rem; margin: 0; text-align: right; margin-left: auto; }
+  .board .search { flex: 1 1 18rem; max-width: 26rem; }
+  .board .search[hidden] { display: none; }
+  .board .search label { display: block; font-size: 0.86rem; font-weight: 560; margin-bottom: 0.2rem; }
+  .board .search input {
+    width: 100%; font: inherit; font-size: 0.95rem; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--rule); border-radius: 4px; padding: 0.4rem 0.6rem;
+  }
+  .board .search input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .board .search-status { font-size: 0.8rem; color: var(--muted); margin: 0.25rem 0 0; min-height: 1.2em; }
+  .board.searching .fold > .more { display: none; }
+  .board .no-match { color: var(--muted); padding: 0.8rem 0 0.8rem 1.1rem; border-bottom: 1px solid var(--rule); }
   .board .row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) repeat(var(--n), var(--score-w)) 5.4rem;
