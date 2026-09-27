@@ -23,7 +23,7 @@ const TARBALL = `https://codeload.github.com/${REPO}/tar.gz/refs/heads/${BRANCH}
 const COMMITS_FEED = `https://github.com/${REPO}/commits/${BRANCH}.atom`;
 const OUT = new URL("../src/data/ledger.json", import.meta.url);
 
-const WANT = /^[^/]+\/(metrics\/[^/]+\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
+const WANT = /^[^/]+\/(metrics\/[^/]+\.json|data\/qp-topics\/qp-topics\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
 
 // A case summary (docs/case-summaries.md in the ledger repo): YAML front matter
 // written by the harness, then exactly three "## " sections of plain prose. The
@@ -79,6 +79,31 @@ async function main() {
     for (const name of ["leaderboard", "claim-scores", "statpack", "backtest", "big-cases"]) {
       try { metrics[name] = await readJSON(join(dir, "metrics", `${name}.json`)); } catch { metrics[name] = null; }
     }
+    // --- question-presented topics (docs/qp-topic.md): one primary label per
+    // case, plus an optional secondary. Copied only from a gate-passing artifact.
+    const topics = {};
+    const docketNumbers = {}; // case_id → Court docket number ("25-123"), where the labels artifact records one
+    let topicsMeta = null;
+    try {
+      const qp = await readJSON(join(dir, "data", "qp-topics", "qp-topics.json"));
+      if (qp.agreement?.gate_passed) {
+        for (const e of qp.entries ?? []) {
+          if (e.case_id && e.docket_number) docketNumbers[e.case_id] = String(e.docket_number);
+          if (!e.case_id || !e.label) continue;
+          const prev = topics[e.case_id];
+          if (prev && (prev.batch ?? 0) > (e.batch ?? 0)) continue;
+          topics[e.case_id] = { label: e.label, secondary: e.secondary ?? null, batch: e.batch ?? null };
+        }
+        topicsMeta = {
+          vocabulary: qp.vocabulary ?? null,
+          labeler: qp.labeler ?? null,
+          agreement_rate: qp.agreement?.overall_rate ?? null,
+          reference_n: qp.agreement?.overall_n ?? null,
+          cases: Object.keys(topics).length,
+        };
+      }
+    } catch { /* no labels artifact yet: the board simply shows no topic tags */ }
+
     const frozen = metrics.leaderboard?.frozen_process ?? { digests: [], since: null };
     const frozenDigests = new Set(frozen.digests ?? []);
     const frozenSince = frozen.since ? Date.parse(frozen.since) : null;
@@ -171,11 +196,14 @@ async function main() {
       predictors,
       rows,
       summaries,
+      topics,
+      topics_meta: topicsMeta,
+      docket_numbers: docketNumbers,
       metrics: { leaderboard: metrics.leaderboard, big_cases: metrics["big-cases"], statpack_terms: metrics.statpack?.interim?.terms ?? null },
     };
     await mkdir(dirname(fileURLToPath(OUT)), { recursive: true });
     await writeFile(OUT, JSON.stringify(out, null, 1));
-    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${Object.keys(summaries).length} case summaries, sha ${head.sha ?? "unknown"}`);
+    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${Object.keys(summaries).length} case summaries, ${Object.keys(topics).length} topic labels, sha ${head.sha ?? "unknown"}`);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
