@@ -28,6 +28,7 @@ const longDate = (d) =>
 const repo = ledger.source?.repo ?? "ModelMirrorAI/fedcourtsai";
 // The case's question-presented topic, if the labeler has reached it (docs/qp-topic.md).
 const topic = ledger.topics?.[row.case_id] ?? null;
+const docketNumber = ledger.docket_numbers?.[row.case_id] ?? null;
 const topicPrimary = topic && topicName(topic.label);
 const topicSecondary = topic?.secondary && topic.secondary !== topic.label ? topicName(topic.secondary) : null;
 
@@ -49,7 +50,7 @@ const isCurrent = (read, eventId) => {
   return Boolean(c && c.event_id === eventId && c.run_id === read.run_id);
 };
 ---
-<details class="entry">
+<details class="entry" data-docket={docketNumber ?? undefined} data-case={row.case_id}>
   <summary class="row">
     <div class="case">
       <span class="caption">{row.caption ?? row.case_id}</span>
@@ -75,6 +76,7 @@ const isCurrent = (read, eventId) => {
   <div class="body">
     <p class="ident">
       <span class="full">{row.caption}</span>
+      {docketNumber && <span>No. {docketNumber} · </span>}
       <span class="mono">{row.case_id}</span>
       {typeof row.score_range === "number" && <span> · models differ by up to {score(row.score_range)}</span>}
       {topicPrimary && <span> · topic: <a href="/how-it-works#case-topics">{topicPrimary}{topicSecondary && ` (also ${topicSecondary})`}</a></span>}
