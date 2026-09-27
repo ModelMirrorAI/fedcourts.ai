@@ -82,11 +82,13 @@ async function main() {
     // --- question-presented topics (docs/qp-topic.md): one primary label per
     // case, plus an optional secondary. Copied only from a gate-passing artifact.
     const topics = {};
+    const docketNumbers = {}; // case_id → Court docket number ("25-123"), where the labels artifact records one
     let topicsMeta = null;
     try {
       const qp = await readJSON(join(dir, "data", "qp-topics", "qp-topics.json"));
       if (qp.agreement?.gate_passed) {
         for (const e of qp.entries ?? []) {
+          if (e.case_id && e.docket_number) docketNumbers[e.case_id] = String(e.docket_number);
           if (!e.case_id || !e.label) continue;
           const prev = topics[e.case_id];
           if (prev && (prev.batch ?? 0) > (e.batch ?? 0)) continue;
@@ -196,6 +198,7 @@ async function main() {
       summaries,
       topics,
       topics_meta: topicsMeta,
+      docket_numbers: docketNumbers,
       metrics: { leaderboard: metrics.leaderboard, big_cases: metrics["big-cases"], statpack_terms: metrics.statpack?.interim?.terms ?? null },
     };
     await mkdir(dirname(fileURLToPath(OUT)), { recursive: true });
