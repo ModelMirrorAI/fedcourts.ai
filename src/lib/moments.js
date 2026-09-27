@@ -72,3 +72,29 @@ export const plainOutcome = (stage, disposition) => {
   };
   return words[stage]?.[disposition] ?? disposition;
 };
+
+// Chronological order of the declared moments within a case (the register's
+// own order: petition, emergency application, merits).
+export const MOMENT_ORDER = Object.keys(MOMENTS);
+
+// Display names for the question-presented topic labels (qp-topic-v0,
+// fedcourtsai/docs/qp-topic.md). `unclassifiable` is deliberately absent:
+// the board shows no tag for it.
+export const TOPIC_NAMES = {
+  "criminal-law": "Criminal law",
+  "civil-procedure": "Civil procedure",
+  "constitutional-rights": "Constitutional rights",
+  "business-and-financial-regulation": "Business & finance",
+  "firearms": "Firearms",
+  "habeas-and-postconviction": "Habeas & post-conviction",
+  "administrative-law-and-benefit-programs": "Agencies & benefits",
+  "first-amendment": "First Amendment",
+  "employment-and-antidiscrimination": "Employment & discrimination",
+  "intellectual-property": "Intellectual property",
+  "sovereignty-and-foreign-relations": "Sovereignty & foreign relations",
+  "environment-energy-and-property": "Environment, energy & property",
+  "election-law": "Election law",
+  "tax": "Tax",
+  "immigration": "Immigration",
+};
+export const topicName = (label) => TOPIC_NAMES[label] ?? null;
