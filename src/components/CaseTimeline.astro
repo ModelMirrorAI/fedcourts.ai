@@ -4,10 +4,17 @@
 // Each step the models predicted at is a <label> for one of the entry's radio
 // inputs (`pick`), so clicking it switches which predictions the entry shows.
 // Steps without predictions are plain markers. The decision step at the end of
-// each track says, in general terms, what each outcome would mean.
+// each track says, in general terms, what each outcome would mean — except on
+// the track of the case's current moment, where a row carrying `outcome_lines`
+// (big-cases.json 1.2) replaces that generic text with the harness's fixed
+// sentences naming the parties. Those lines describe the actions open at the
+// moment, so they never move to another track or outlive its decision.
 import { momentFor } from "../lib/moments.js";
 
-const { events = [], ids = [] } = Astro.props;
+const { events = [], ids = [], moment = null, outcomeLines = null } = Astro.props;
+const momentStage = moment ? momentFor(moment)?.stage ?? "cert" : null;
+// Consequence words only: which action the line is about, never how likely it is.
+const IF_WORDS = { granted: "If granted", denied: "If denied", reversed: "If reversed", affirmed: "If affirmed", vacated: "If vacated" };
 
 const longDate = (d) =>
   d ? new Date(`${String(d).slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "";
@@ -33,7 +40,7 @@ const tracks = [];
 if (stages.has("interim")) {
   const out = outcomeAt("interim");
   tracks.push({
-    name: "Emergency application",
+    name: "Emergency application", stage: "interim",
     steps: [
       { event: "evt-motion-disposition", label: "Application filed" },
       { event: "evt-order-response-requested-disposition", label: "Response requested", optional: true },
@@ -48,7 +55,7 @@ if (stages.has("interim")) {
 }
 if (stages.has("cert") || stages.has("merits")) {
   tracks.push({
-    name: "Petition",
+    name: "Petition", stage: "cert",
     steps: [
       { event: "evt-petition-arrival-disposition", label: "Petition filed" },
       { event: "evt-petition-disposition", label: "Sent to conference" },
@@ -65,7 +72,7 @@ if (stages.has("cert") || stages.has("merits")) {
 if (certTaken) {
   const out = outcomeAt("merits");
   tracks.push({
-    name: "Merits",
+    name: "Merits", stage: "merits",
     steps: [
       { event: "evt-order-judgment", label: "Briefing" },
       { event: "evt-brief-judgment", label: "Briefs in", optional: true },
@@ -87,7 +94,9 @@ const rendered = tracks.map((t) => {
     .map((s) => ({ ...s, pick: s.event ? byId.get(s.event) ?? null : null }));
   let reached = -1;
   steps.forEach((s, i) => { if (s.pick || (s.decision && s.outcome)) reached = i; });
-  return { ...t, steps: steps.map((s, i) => ({ ...s, done: i <= reached, now: i === reached && !s.decision })) };
+  // The current moment's lines, on its own track only (a merits moment's lines sit on Merits, never on Petition).
+  const lines = outcomeLines?.length && t.stage === momentStage ? outcomeLines : null;
+  return { ...t, lines, steps: steps.map((s, i) => ({ ...s, done: i <= reached, now: i === reached && !s.decision })) };
 });
 ---
 {rendered.length > 0 && (
@@ -116,7 +125,11 @@ const rendered = tracks.map((t) => {
             );
           })}
         </ol>
-        {t.steps.filter((s) => s.decision && !s.outcome).map((s) => (
+        {t.steps.filter((s) => s.decision && !s.outcome).map((s) => t.lines ? (
+          <ul class="fork outcome-lines">
+            {t.lines.map((l) => <li><strong>{IF_WORDS[l.action] ?? l.action}:</strong> {l.line}</li>)}
+          </ul>
+        ) : (
           <p class="fork">
             {s.fork.map(([what, means], i) => (
               <span>{i > 0 && <span class="sep"> · </span>}If the Court <strong>{what}</strong>: {means}.</span>

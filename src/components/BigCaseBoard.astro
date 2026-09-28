@@ -7,6 +7,7 @@
 // The first SHOW rows are open to the page; the rest sit behind a second <details>.
 import ledger from "../data/ledger.json";
 import Entry from "./BigCaseEntry.astro";
+import { topicKey, topicName } from "../lib/moments.js";
 
 const SHOW = 25;
 
@@ -15,6 +16,19 @@ const predictors = board?.predictors ?? [];
 const rows = board?.rows ?? [];
 const top = rows.slice(0, SHOW);
 const rest = rows.slice(SHOW);
+
+// Topic filter chips: one per primary topic on the board, largest first, then
+// "No topic" for the cases that show no tag. Counts are over the whole board.
+const topicCounts = new Map();
+for (const row of rows) {
+  const k = topicKey(ledger.topics?.[row.case_id]);
+  topicCounts.set(k, (topicCounts.get(k) ?? 0) + 1);
+}
+const noTopic = topicCounts.get("none") ?? 0;
+const chips = [...topicCounts]
+  .filter(([k]) => k !== "none")
+  .map(([k, n]) => ({ key: k, name: topicName(k), n }))
+  .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
 
 // Display names: strip the "-baseline" suffix the ledger uses and capitalize.
 const shortName = (id) => {
@@ -44,6 +58,14 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
           placeholder="Party name, docket number, or topic" aria-describedby="case-search-status" />
         <p id="case-search-status" class="search-status" aria-live="polite"></p>
       </div>
+      {chips.length > 0 && (
+        <div class="topics" role="group" aria-labelledby="topics-label" hidden>
+          <span id="topics-label" class="topics-label">Topic</span>
+          <button type="button" class="chip" data-topic="" aria-pressed="true">All <span class="count">{rows.length}</span></button>
+          {chips.map((c) => <button type="button" class="chip" data-topic={c.key} aria-pressed="false">{c.name} <span class="count">{c.n}</span></button>)}
+          {noTopic > 0 && <button type="button" class="chip" data-topic="none" aria-pressed="false">No topic <span class="count">{noTopic}</span></button>}
+        </div>
+      )}
       <p class="scale">Big-case score · 0 = routine, 1 = landmark</p>
     </div>
     <div class="row head" role="row">
@@ -60,7 +82,7 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
       </details>
     )}
 
-    <p class="no-match" hidden>No cases on the board match that search. The board lists only cases the models have predicted and scored; the <a href="/ledger">ledger</a> has every predicted event.</p>
+    <p class="no-match" hidden>No cases on the board match. The board lists only cases the models have predicted and scored; the <a href="/ledger">ledger</a> has every predicted event.</p>
     <p class="foot">
       {board.cases} cases · {board.scored_reads} scores
       {board.rows_with_leakage_flag > 0 && <span> · {board.rows_with_leakage_flag} with a <a href="#possible-leak">possible leak</a></span>}
@@ -72,11 +94,12 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
 )}
 
 <script>
-  // Case search: progressive enhancement over the static board. Without
-  // JavaScript the box stays hidden and the board is unchanged. Every word
-  // typed must appear in the case's name, docket numbers, topic, or summary;
-  // matches keep the board's order. The query is kept in ?q= so a search can
-  // be linked to.
+  // Case search and topic filter: progressive enhancement over the static
+  // board. Without JavaScript both stay hidden and the board is unchanged.
+  // Every word typed must appear in the case's name, docket numbers, topic, or
+  // summary, and a chosen topic must be the case's primary one ("none" is the
+  // cases without a tag); the two combine, and matches keep the board's order.
+  // Both are kept in the URL (?q=, ?topic=) so a view can be linked to.
   const board = document.querySelector(".board");
   const box = board?.querySelector(".search");
   const input = board?.querySelector("#case-search");
@@ -84,13 +107,20 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
     const norm = (t) => (t ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9-]+/g, " ");
     const entries = [...board.querySelectorAll("details.entry")].map((el) => ({
       el,
+      topic: el.dataset.topic ?? "none",
       text: " " + norm([
         el.querySelector(".caption")?.textContent,
+        el.querySelector(".ident .full")?.textContent,
+        el.querySelector(".headline")?.textContent,
         el.dataset.case, el.dataset.case?.split("/")[1], el.dataset.docket,
         ...[...el.querySelectorAll(".tag.topic, .ident a")].map((t) => t.textContent),
         el.querySelector(".summary .cols")?.textContent,
       ].join(" ")) + " ",
     }));
+    const chipBox = board.querySelector(".topics");
+    const chips = chipBox ? [...chipBox.querySelectorAll(".chip")] : [];
+    const known = new Set(chips.map((c) => c.dataset.topic));
+    let topic = "";
     const fold = board.querySelector("details.fold");
     const status = board.querySelector("#case-search-status");
     const none = board.querySelector(".no-match");
@@ -99,11 +129,11 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
 
     const run = () => {
       const terms = norm(input.value).split(" ").filter(Boolean);
-      const on = terms.length > 0;
+      const on = terms.length > 0 || topic !== "";
       if (on && !active && fold) foldWasOpen = fold.open;
       let n = 0;
-      for (const { el, text } of entries) {
-        const hit = !on || terms.every((t) => text.includes(t));
+      for (const { el, text, topic: k } of entries) {
+        const hit = (!topic || k === topic) && terms.every((t) => text.includes(t));
         el.hidden = !hit;
         if (hit) n++;
       }
@@ -113,15 +143,26 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
       status.textContent = on ? (n === 1 ? "1 case matches" : `${n} cases match`) : "";
       active = on;
       const url = new URL(location.href);
-      if (on) url.searchParams.set("q", input.value.trim()); else url.searchParams.delete("q");
+      if (terms.length) url.searchParams.set("q", input.value.trim()); else url.searchParams.delete("q");
+      if (topic) url.searchParams.set("topic", topic); else url.searchParams.delete("topic");
       history.replaceState(null, "", url);
     };
 
+    const pick = (k) => {
+      topic = known.has(k) ? k : "";
+      for (const c of chips) c.setAttribute("aria-pressed", String(c.dataset.topic === topic));
+    };
+    for (const c of chips) c.addEventListener("click", () => { pick(c.dataset.topic === topic ? "" : c.dataset.topic); run(); });
+
     box.hidden = false;
+    if (chipBox) chipBox.hidden = false;
     input.addEventListener("input", run);
     input.addEventListener("keydown", (e) => { if (e.key === "Escape" && input.value) { input.value = ""; run(); } });
-    const q = new URLSearchParams(location.search).get("q");
-    if (q) { input.value = q; run(); }
+    const params = new URLSearchParams(location.search);
+    const q = params.get("q");
+    if (q) input.value = q;
+    pick(params.get("topic") ?? "");
+    if (q || topic) run();
   }
 </script>
 
@@ -138,6 +179,17 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
     border: 1px solid var(--rule); border-radius: 4px; padding: 0.4rem 0.6rem;
   }
   .board .search input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .board .topics { flex: 1 1 100%; order: 3; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.35rem; margin: 0.2rem 0 0.4rem; }
+  .board .topics[hidden] { display: none; }
+  .board .topics-label { font-size: 0.86rem; font-weight: 560; margin-right: 0.2rem; }
+  .board .chip {
+    font: inherit; font-size: 0.8rem; line-height: 1.3; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--rule); border-radius: 999px; padding: 0.15rem 0.6rem; cursor: pointer;
+  }
+  .board .chip .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .board .chip:hover { border-color: var(--accent); }
+  .board .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); font-weight: 560; }
+  .board .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .board .search-status { font-size: 0.8rem; color: var(--muted); margin: 0.25rem 0 0; min-height: 1.2em; }
   .board.searching .fold > .more { display: none; }
   .board .no-match { color: var(--muted); padding: 0.8rem 0 0.8rem 1.1rem; border-bottom: 1px solid var(--rule); }
@@ -164,6 +216,12 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
     padding-left: 1.1rem; position: relative;
   }
+  .board .caption.short { display: block; -webkit-line-clamp: unset; }
+  .board .headline {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+    padding-left: 1.1rem; margin-top: 0.1rem; color: var(--muted); font-size: 0.88rem; line-height: 1.35;
+  }
+  .board details[open] > summary .headline { display: none; }
   .board .caption::before { content: "›"; position: absolute; left: 0; top: -0.05em; color: var(--muted); transition: transform 0.15s; }
   .board details[open] > summary .caption::before { transform: rotate(90deg); }
   .board .meta { display: block; padding-left: 1.1rem; margin-top: 0.15rem; }
@@ -184,6 +242,9 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
   .board .summary .col > h3:first-child { margin-top: 0.2rem; }
   @media (max-width: 899px) { .board .summary .col + .col > h3:first-child { margin-top: 0.9rem; } }
   .board .summary p { margin: 0 0 0.5rem; font-size: 0.95rem; }
+  .board .summary .lead { font-size: 1rem; max-width: 62ch; margin: 0.2rem 0 0.4rem; }
+  .board .summary .wide { max-width: 62ch; }
+  .board .summary .wide h3 { margin-top: 0.6rem; }
   .board .summary .provenance { color: var(--muted); font-size: 0.8rem; margin-top: 0.8rem; }
   .board .predictions-head { font-size: 0.8rem; font-weight: 560; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 0.4rem 0 0; }
   .board .ident .full { display: block; color: var(--ink); font-size: 0.92rem; margin-bottom: 0.2rem; }
@@ -227,6 +288,8 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
   .board .step-pred { font-family: var(--mono); font-size: 0.66rem; color: var(--accent); }
   .board .fork { font-size: 0.82rem; color: var(--muted); margin: 0.45rem 0 0; }
   .board .fork strong { color: var(--ink); font-weight: 560; }
+  .board .outcome-lines { list-style: none; padding: 0; max-width: 62ch; }
+  .board .outcome-lines li { margin: 0.15rem 0; }
 
   /* the radios behind the timeline: kept focusable, never seen */
   .board .picks { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -244,6 +307,9 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
     .board .row { grid-template-columns: repeat(var(--n), 1fr) 1.3fr; gap: 0.2rem 0.6rem; font-size: 0.95rem; }
     .board .row.head { display: none; }
     .board .scale { text-align: left; }
+    /* one scrolling row of chips rather than a wall of them above the board */
+    .board .topics { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 0.3rem; scrollbar-width: thin; }
+    .board .chip, .board .topics-label { flex: none; white-space: nowrap; }
     .board .case { grid-column: 1 / -1; }
     .board .num { text-align: left; padding-left: 1.1rem; }
     .board .num::before { content: attr(data-label); display: block; font-size: 0.68rem; color: var(--muted); font-family: var(--mono); letter-spacing: 0.02em; }

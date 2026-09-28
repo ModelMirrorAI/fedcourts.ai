@@ -26,8 +26,11 @@ const OUT = new URL("../src/data/ledger.json", import.meta.url);
 const WANT = /^[^/]+\/(metrics\/[^/]+\.json|data\/qp-topics\/qp-topics\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
 
 // A case summary (docs/case-summaries.md in the ledger repo): YAML front matter
-// written by the harness, then exactly three "## " sections of plain prose. The
-// harness rejects any markup, so the body is carried as text and rendered escaped.
+// written by the harness, then "## " sections of plain prose — three under body
+// contract 1, five under contract 2 (which adds "In brief" first and "What each
+// outcome would mean" last). Sections are kept by heading, so either contract
+// parses unchanged. The harness rejects any markup, so the body is carried as
+// text and rendered escaped.
 function parseSummary(text) {
   const m = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!m) return null;
