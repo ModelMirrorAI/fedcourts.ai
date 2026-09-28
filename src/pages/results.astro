@@ -1,0 +1,91 @@
+---
+// Release 1 results. Renders the public summary committed in the fedcourtsai
+// repo, read at the results/ot2026-longconf tag by scripts/fetch-results.mjs.
+// Until that tag exists the page shows its pending state, is left out of the
+// nav, and asks not to be indexed. Nothing here is computed or edited: the
+// summary is shown as committed, and on any disagreement the repo wins.
+import Base from "../layouts/Base.astro";
+
+const REPO = "https://github.com/ModelMirrorAI/fedcourtsai";
+const metaFile = Object.values(import.meta.glob("../data/results/meta.json", { eager: true, import: "default" }))[0];
+const summary = Object.values(import.meta.glob("../data/results/summary.md", { eager: true }))[0];
+const meta = metaFile ?? { state: "pending" };
+const published = meta.state === "published" && summary;
+const Content = summary?.Content;
+const short = meta.sha ? meta.sha.slice(0, 7) : null;
+---
+<Base
+  title="Results"
+  description={published
+    ? "The first scored results: AI forecasts of the Supreme Court’s first conference of the October 2026 Term, each committed before the Court acted."
+    : "Results publish after the Court acts."}
+  noindex={!published}
+  wide={Boolean(published)}
+>
+  <h1>Results</h1>
+
+  {published ? (
+    <>
+      <p>
+        <span class="stamp">
+          Release 1 · tag <a href={meta.release_url}>{meta.tag}</a>{short && <> · commit <a href={`${REPO}/commit/${meta.sha}`}>{short}</a></>}
+        </span>
+      </p>
+      <article class="results-body">
+        <Content />
+      </article>
+      <p class="results-source"><small>
+        This page is the <a href={meta.summary_url}>public summary</a> committed at the tag above, shown without changes.{" "}
+        Every figure in it is copied from the <a href={meta.audit_url}>audit write-up</a> or the release’s dataset export,{" "}
+        and if this page and either one disagree, the source is right and this page is wrong.
+      </small></p>
+    </>
+  ) : (
+    <>
+      <p class="lead">Results publish after the Court acts.</p>
+
+      <p>
+        The first scored release covers the Supreme Court’s first conference of the October 2026 Term, on September 28, 2026.{" "}
+        Before it, three AI models each forecast whether the Court would take up a set of pending petitions, and every forecast{" "}
+        was merged into the public <a href="/ledger">ledger</a> before the Court met.
+      </p>
+
+      <ol class="steps">
+        <li><strong>The conference.</strong> The Justices meet on September 28, 2026. Forecasts for it are already on the ledger.</li>
+        <li><strong>The order list.</strong> The Court announces which petitions it granted and denied, expected on or around October 5.</li>
+        <li><strong>Grading and audit.</strong> Each forecast is graded against the Court’s action and the figures are checked.</li>
+        <li><strong>Publication.</strong> The write-up is tagged in the repository, archived on Zenodo, and shown here.</li>
+      </ol>
+
+      <h2>Already fixed</h2>
+      <p>
+        What this page will show, and how, was committed before any outcome existed. The{" "}
+        <a href={`${REPO}/commits/main/docs/release-ot2026-public-summary.md`}>public summary template</a> sets out every table
+        and the rules for filling it in: no placeholder is replaced by an estimate, no single score is pooled across models or
+        groups of petitions, and every number carries its count. The instructions and settings the models ran under are fixed by the{" "}
+        <a href={`${REPO}/releases/tag/prereg%2Fproc-v8`}><code>prereg/proc-v8</code></a> tag, archived as{" "}
+        <a href="https://doi.org/10.5281/zenodo.22966597">doi:10.5281/zenodo.22966597</a>.
+      </p>
+      <p>
+        Until then, the <a href="/ledger">ledger</a> lists every forecast as it was committed, and{" "}
+        <a href="/how-it-works">How it works</a> explains how to check that a forecast came before the outcome.
+      </p>
+    </>
+  )}
+</Base>
+
+<style>
+  .lead { font-size: 1.2rem; }
+  .steps { padding-left: 1.3em; }
+  .steps li { margin: 0.5em 0; }
+
+  /* The summary's own sections: its first heading is the release headline. */
+  .results-body { max-width: var(--wide); }
+  .results-body :global(> h2:first-child) { font-size: 1.45rem; margin-top: 0.5rem; }
+  .results-body :global(p), .results-body :global(ul) { max-width: var(--measure); }
+  /* Tables scroll inside themselves on narrow screens; the page never does. */
+  .results-body :global(table) { display: block; overflow-x: auto; max-width: 100%; margin-bottom: 1.4em; }
+  .results-body :global(th) { white-space: nowrap; }
+  .results-body :global(td:first-child) { min-width: 12ch; }
+  .results-source { max-width: var(--measure); margin-top: 2.5rem; border-top: 1px solid var(--rule); padding-top: 1rem; }
+</style>
