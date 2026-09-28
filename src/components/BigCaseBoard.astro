@@ -231,19 +231,20 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
   .board .body { position: relative; padding: 0.6rem 0 1rem 1.1rem; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--accent-soft) 45%, transparent); }
   .board .ident { color: var(--muted); font-size: 0.82rem; margin: 0 0 0.6rem; }
   .board .summary { margin: 0.2rem 0 1.2rem; padding: 0.2rem 0 0.8rem; border-bottom: 1px solid var(--rule); }
-  .board .summary .cols { max-width: 62ch; }
-  .board .summary .provenance { max-width: 62ch; }
+  /* narrow screens: one readable measure for every block of the summary */
+  .board .summary .lead, .board .summary .cols, .board .summary .wide, .board .summary .provenance { max-width: 62ch; }
   @media (min-width: 900px) {
     /* the three sections side by side, so the summary uses the page's width without long lines */
-    .board .summary .cols { max-width: none; display: grid; grid-template-columns: 1.15fr 1fr 0.85fr; gap: 0 1.8rem; padding-right: 1.1rem; }
-    .board .summary .provenance { max-width: none; }
+    .board .summary .cols { max-width: none; display: grid; grid-template-columns: 1.15fr 1fr 0.85fr; gap: 0 1.8rem; }
+    /* every block of the summary runs to the same right edge as the columns */
+    .board .summary .lead, .board .summary .wide, .board .summary .provenance { max-width: none; }
+    .board .summary > * { padding-right: 1.1rem; }
   }
   .board .summary h3 { font-size: 0.95rem; margin: 0.9rem 0 0.2rem; }
   .board .summary .col > h3:first-child { margin-top: 0.2rem; }
   @media (max-width: 899px) { .board .summary .col + .col > h3:first-child { margin-top: 0.9rem; } }
   .board .summary p { margin: 0 0 0.5rem; font-size: 0.95rem; }
-  .board .summary .lead { font-size: 1rem; max-width: 62ch; margin: 0.2rem 0 0.4rem; }
-  .board .summary .wide { max-width: 62ch; }
+  .board .summary .lead { font-size: 1rem; margin: 0.2rem 0 0.4rem; }
   .board .summary .wide h3 { margin-top: 0.6rem; }
   .board .summary .provenance { color: var(--muted); font-size: 0.8rem; margin-top: 0.8rem; }
   .board .predictions-head { font-size: 0.8rem; font-weight: 560; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); margin: 0.4rem 0 0; }
