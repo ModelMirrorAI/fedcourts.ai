@@ -3,7 +3,7 @@
 // average; expands to the case's predicted events and every model's newest
 // read of each. Styled by BigCaseBoard.astro (global styles under .board).
 import ledger from "../data/ledger.json";
-import { momentFor, plainCall, plainOutcome, topicName, MOMENT_ORDER } from "../lib/moments.js";
+import { momentFor, plainCall, plainOutcome, topicName, topicKey, MOMENT_ORDER } from "../lib/moments.js";
 import CaseTimeline from "./CaseTimeline.astro";
 
 const { row } = Astro.props;
@@ -20,7 +20,15 @@ const statusLabel = { pending: "awaiting the Court", partly_resolved: "partly de
 const reads = new Map((row.current_reads ?? []).map((r) => [r.predictor_id, r]));
 
 // The case's newest plain-language summary, if the ledger has one (docs/case-summaries.md).
+// Under body contract 2 its "In brief" section is the one-line headline shown
+// under the case's name, and "What each outcome would mean" runs full width
+// beneath the other sections. A contract-1 summary has neither and shows as before.
 const summary = ledger.summaries?.[row.case_id] ?? null;
+const BRIEF = "In brief", OUTCOMES = "What each outcome would mean";
+const brief = summary?.sections.find((s) => s.heading === BRIEF) ?? null;
+const headline = brief ? brief.paragraphs.join(" ") : null;
+const outcomesProse = summary?.sections.find((s) => s.heading === OUTCOMES) ?? null;
+const columns = summary?.sections.filter((s) => s !== brief && s !== outcomesProse) ?? [];
 const MODEL_NAMES = { "claude-sonnet-5": "Claude Sonnet 5" };
 const modelName = (id) => MODEL_NAMES[id] ?? id;
 const longDate = (d) =>
@@ -28,7 +36,13 @@ const longDate = (d) =>
 const repo = ledger.source?.repo ?? "ModelMirrorAI/fedcourtsai";
 // The case's question-presented topic, if the labeler has reached it (docs/qp-topic.md).
 const topic = ledger.topics?.[row.case_id] ?? null;
-const docketNumber = ledger.docket_numbers?.[row.case_id] ?? null;
+// Names and docket number (big-cases.json 1.1+): the short caption where the
+// harness could derive one, else the full caption, clamped. The board's own
+// docket number wins; a board without one falls back to the topic labels'.
+const fullCaption = row.caption ?? row.case_id;
+const shortCaption = row.short_caption ?? null;
+const docketNumber = row.docket_number ?? ledger.docket_numbers?.[row.case_id] ?? null;
+const docketUrl = row.docket_number ? row.docket_url ?? null : null;
 const topicPrimary = topic && topicName(topic.label);
 const topicSecondary = topic?.secondary && topic.secondary !== topic.label ? topicName(topic.secondary) : null;
 
@@ -50,10 +64,11 @@ const isCurrent = (read, eventId) => {
   return Boolean(c && c.event_id === eventId && c.run_id === read.run_id);
 };
 ---
-<details class="entry" data-docket={docketNumber ?? undefined} data-case={row.case_id}>
+<details class="entry" data-docket={docketNumber ?? undefined} data-case={row.case_id} data-topic={topicKey(topic)}>
   <summary class="row">
     <div class="case">
-      <span class="caption">{row.caption ?? row.case_id}</span>
+      <span class:list={["caption", { short: shortCaption }]}>{shortCaption ?? fullCaption}</span>
+      {headline && <span class="headline">{headline}</span>}
       <span class="meta">
         {topicPrimary && <span class="tag topic">{topicPrimary}</span>}
         <span class="tag">{statusLabel[row.status] ?? row.status}</span>
@@ -75,22 +90,31 @@ const isCurrent = (read, eventId) => {
 
   <div class="body">
     <p class="ident">
-      <span class="full">{row.caption}</span>
-      {docketNumber && <span>No. {docketNumber} · </span>}
+      <span class="full">{fullCaption}</span>
+      {docketNumber && (docketUrl
+        ? <span><a class="docket" href={docketUrl}>No. {docketNumber} on supremecourt.gov ↗</a> · </span>
+        : <span>No. {docketNumber} · </span>)}
       <span class="mono">{row.case_id}</span>
       {typeof row.score_range === "number" && <span> · models differ by up to {score(row.score_range)}</span>}
       {topicPrimary && <span> · topic: <a href="/how-it-works#case-topics">{topicPrimary}{topicSecondary && ` (also ${topicSecondary})`}</a></span>}
     </p>
     {summary && (
       <section class="summary" aria-label="Case summary">
+        {headline && <p class="lead">{headline}</p>}
         <div class="cols">
-          {summary.sections.map((sec) => (
+          {columns.map((sec) => (
             <div class="col">
               <h3>{sec.heading}</h3>
               {sec.paragraphs.map((para) => <p>{para}</p>)}
             </div>
           ))}
         </div>
+        {outcomesProse && (
+          <div class="wide">
+            <h3>{outcomesProse.heading}</h3>
+            {outcomesProse.paragraphs.map((para) => <p>{para}</p>)}
+          </div>
+        )}
         <p class="provenance">
           Plain-language summary written by {modelName(summary.model)} from the Court's docket and filings
           as of {longDate(summary.snapshot)}. It is AI-generated and can contain mistakes.{" "}
@@ -103,7 +127,7 @@ const isCurrent = (read, eventId) => {
     <div class="picks">
       {ids.map((id, i) => <input type="radio" class="pick" name={`pick-${slug}`} id={id} checked={i === selected} />)}
     </div>
-    <CaseTimeline events={events} ids={ids} />
+    <CaseTimeline events={events} ids={ids} moment={row.moment} outcomeLines={row.outcome_lines} />
     <h3 class="predictions-head">The models' predictions</h3>
     {events.length > 1 && <p class="pick-hint">The models predicted this case at {events.length} points. The newest is shown; choose a marked step on the timeline to see the others.</p>}
     <div class="events">
