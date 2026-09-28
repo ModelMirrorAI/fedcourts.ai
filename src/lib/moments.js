@@ -98,3 +98,8 @@ export const TOPIC_NAMES = {
   "immigration": "Immigration",
 };
 export const topicName = (label) => TOPIC_NAMES[label] ?? null;
+// The key a board row files under for the topic filter: its primary label where
+// that label has a display name, else "none" — which pools cases the labeler has
+// not reached with the few it could not place ("unclassifiable"), neither of
+// which shows a tag on the board.
+export const topicKey = (topic) => (topic && TOPIC_NAMES[topic.label] ? topic.label : "none");
