@@ -1,0 +1,36 @@
+---
+// Email signup: a plain HTML form posting to Buttondown's embed endpoint.
+// No JavaScript, no third-party script, nothing loaded from Buttondown until
+// someone submits. After submitting, Buttondown redirects to /subscribe/check-email;
+// the confirmation link lands on /subscribe/confirmed (both set in Buttondown's
+// settings).
+const { lead = "Get an email when there's a new release", id = "signup-email" } = Astro.props;
+---
+<form class="signup" action="https://buttondown.com/api/emails/embed-subscribe/fedcourtsai" method="post">
+  <label for={id}>{lead}</label>
+  <div class="signup-row">
+    <input type="email" name="email" id={id} required autocomplete="email" placeholder="you@example.com" />
+    <input type="hidden" name="embed" value="1" />
+    <button type="submit">Sign up</button>
+  </div>
+  <small>2–4 emails a year, around releases. Unsubscribe anytime. <a href="/privacy#email-updates">How your address is used</a>.</small>
+</form>
+
+<style>
+  .signup { max-width: 32rem; margin: 1.5rem 0 1.75rem; }
+  .signup label { display: block; font-weight: 560; margin-bottom: 0.35rem; }
+  .signup-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.35rem; }
+  .signup input[type="email"] {
+    flex: 1 1 14rem; min-width: 0;
+    font: inherit; color: var(--ink); background: var(--paper);
+    border: 1px solid var(--rule); border-radius: 3px; padding: 0.4rem 0.6rem;
+  }
+  .signup input[type="email"]::placeholder { color: var(--muted); }
+  /* The accent is never a fill: an outlined button, tinted on hover. */
+  .signup button {
+    font: inherit; color: var(--accent); background: transparent; cursor: pointer;
+    border: 1px solid var(--accent); border-radius: 3px; padding: 0.4rem 1rem;
+  }
+  .signup button:hover { background: var(--accent-soft); }
+  .signup small { display: block; }
+</style>
