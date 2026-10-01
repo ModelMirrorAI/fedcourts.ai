@@ -5,6 +5,7 @@
 // like every page) and asks not to be indexed. Nothing here is computed or edited: the
 // summary is shown as committed, and on any disagreement the repo wins.
 import Base from "../layouts/Base.astro";
+import Signup from "../components/Signup.astro";
 
 const REPO = "https://github.com/ModelMirrorAI/fedcourtsai";
 const metaFile = Object.values(import.meta.glob("../data/results/meta.json", { eager: true, import: "default" }))[0];
@@ -56,7 +57,7 @@ const short = meta.sha ? meta.sha.slice(0, 7) : null;
         <li><strong>Grading and audit.</strong> Each forecast is graded against the Court’s action and the figures are checked.</li>
         <li><strong>Publication.</strong> The write-up is tagged in the repository, archived on Zenodo, and shown here.</li>
       </ol>
-
+      <Signup lead="Get an email when Release 1 is published" />
       <h2>Already fixed</h2>
       <p>
         What this page will show, and how, was committed before any outcome existed. The{" "}
