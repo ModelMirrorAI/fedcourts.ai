@@ -3,7 +3,7 @@
 // average; expands to the case's predicted events and every model's newest
 // read of each. Styled by BigCaseBoard.astro (global styles under .board).
 import ledger from "../data/ledger.json";
-import { momentFor, plainCall, plainOutcome, topicName, topicKey, MOMENT_ORDER } from "../lib/moments.js";
+import { momentFor, plainCall, plainOutcome, topicName, topicKey, MOMENT_ORDER, STAGE_ORDER } from "../lib/moments.js";
 import CaseTimeline from "./CaseTimeline.astro";
 
 const { row } = Astro.props;
@@ -59,12 +59,21 @@ const slug = row.case_id.replace(/[^a-z0-9]+/gi, "-");
 const ids = events.map((ev) => `pick-${slug}-${ev.event_id}`);
 const selected = events.length - 1;
 
+// For the board's stage filter: the stages this case has predictions at, and,
+// for each, the radio of the first prediction at that stage (events are in
+// order, so the first one found is where the stage begins). An id outside the
+// register falls back to cert, as everywhere else on the board.
+const stageOf = (ev) => momentFor(ev.event_id)?.stage ?? "cert";
+const firstAt = {};
+events.forEach((ev, i) => { const st = stageOf(ev); if (!(`data-first-${st}` in firstAt)) firstAt[`data-first-${st}`] = ids[i]; });
+const stageList = STAGE_ORDER.filter((st) => `data-first-${st}` in firstAt).join(" ");
+
 const isCurrent = (read, eventId) => {
   const c = reads.get(read.predictor_id);
   return Boolean(c && c.event_id === eventId && c.run_id === read.run_id);
 };
 ---
-<details class="entry" data-docket={docketNumber ?? undefined} data-case={row.case_id} data-topic={topicKey(topic)}>
+<details class="entry" data-docket={docketNumber ?? undefined} data-case={row.case_id} data-topic={topicKey(topic)} data-stages={stageList} {...firstAt}>
   <summary class="row">
     <div class="case">
       <span class:list={["caption", { short: shortCaption }]}>{shortCaption ?? fullCaption}</span>
@@ -129,7 +138,7 @@ const isCurrent = (read, eventId) => {
     </div>
     <CaseTimeline events={events} ids={ids} moment={row.moment} outcomeLines={row.outcome_lines} />
     <h3 class="predictions-head">The models' predictions</h3>
-    {events.length > 1 && <p class="pick-hint">The models predicted this case at {events.length} points. The newest is shown; choose a marked step on the timeline to see the others.</p>}
+    {events.length > 1 && <p class="pick-hint">The models predicted this case at {events.length} points. The highlighted step's predictions are shown; choose another marked step on the timeline to see the others.</p>}
     <div class="events">
     {events.map((ev) => {
       // An id outside the register (entry-pinned or legacy) falls back to the cert reading.
