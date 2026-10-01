@@ -3,7 +3,7 @@
 // No JavaScript, no third-party script, nothing loaded from Buttondown until
 // someone submits. After submitting, Buttondown redirects to /subscribe/check-email;
 // the confirmation link lands on /subscribe/confirmed (both set in Buttondown's
-// settings). Open and click tracking are off in Buttondown; see /privacy.
+// settings).
 const { lead = "Get an email when there's a new release", id = "signup-email" } = Astro.props;
 ---
 <form class="signup" action="https://buttondown.com/api/emails/embed-subscribe/fedcourtsai" method="post">
