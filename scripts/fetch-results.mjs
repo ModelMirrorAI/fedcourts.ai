@@ -42,14 +42,23 @@ async function resolveTag() {
 
 const rawUrl = (ref) => `https://raw.githubusercontent.com/${REPO}/${ref}/${DOC}`;
 
-// The page shows the "## Draft" section only: the preamble and the filling
-// rules are for maintainers, and they stay one click away in the repo.
+// The page shows the "## Draft" section only, ending at the next level-2
+// heading: the preamble, the provenance notes and the filling rules are for
+// maintainers, and they stay one click away in the repo. Headings inside
+// fenced code blocks (shell comments) are not headings, so they are skipped.
 function extractDraft(text) {
-  const start = text.search(/^## Draft\s*$/m);
-  const end = text.search(/^## Rules for filling this in\s*$/m);
-  if (start < 0 || end < 0 || end < start) throw new Error("results: summary has no ## Draft … ## Rules section; its layout changed");
-  return text
+  const lines = text.split("\n");
+  let start = -1, end = -1, fenced = false;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(```|~~~)/.test(lines[i])) fenced = !fenced;
+    if (fenced || !/^## /.test(lines[i])) continue;
+    if (start < 0) { if (/^## Draft\s*$/.test(lines[i])) start = i; }
+    else { end = i; break; }
+  }
+  if (start < 0 || end < 0) throw new Error("results: summary has no ## Draft section followed by another ## section; its layout changed");
+  return lines
     .slice(start, end)
+    .join("\n")
     .replace(/^## Draft\s*\n/, "")
     .replace(/\n-{3,}\s*$/, "\n")        // the horizontal rule before ## Rules
     .replace(/^### /gm, "## ")           // the draft's sections sit under the page's own h1
