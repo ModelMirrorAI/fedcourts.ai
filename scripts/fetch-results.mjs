@@ -1,46 +1,44 @@
-// Build-time fetch of the Release 1 public summary.
+// Build-time fetch of every results release's public summary.
 //
-// The Results page renders docs/release-ot2026-public-summary.md from the
-// fedcourtsai repo, read at the results/ot2026-longconf tag and nowhere else.
-// Until that tag exists the page shows its pending state, so it goes live on
-// the first rebuild after the tag is pushed, with no change here.
+// Each release in src/lib/releases.js renders its public summary from the
+// fedcourtsai repo, read at that release's tag and nowhere else. A release
+// whose tag does not exist yet is written out as pending: the Results index
+// lists it as upcoming, and it publishes on the first rebuild after the tag
+// is pushed, with no change here.
 //
-// Fail closed: once the tag exists, any problem reading or checking the
-// summary fails the build, so Cloudflare Pages keeps serving the last good
-// deploy rather than publishing a partial or unfilled page.
+// Fail closed: once a release's tag exists, any problem reading or checking
+// its summary fails the build, so Cloudflare Pages keeps serving the last
+// good deploy rather than publishing a partial or unfilled page.
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { RELEASES, RESULTS_REPO as REPO } from "../src/lib/releases.js";
 
-const REPO = "ModelMirrorAI/fedcourtsai";
-const TAG = "results/ot2026-longconf";
-const DOC = "docs/release-ot2026-public-summary.md";
-const AUDIT = "docs/release-ot2026-long-conference.md";
 const OUT = new URL("../src/data/results/", import.meta.url);
 
-// The tag's commit, via git's smart-HTTP protocol: no API token, no rate limit.
+// A tag's commit, via git's smart-HTTP protocol: no API token, no rate limit.
 // Returns { exists, sha }; sha is null only if git itself is unavailable.
-async function resolveTag() {
+async function resolveTag(tag, doc) {
   try {
     const { stdout } = await promisify(execFile)(
-      "git", ["ls-remote", `https://github.com/${REPO}`, `refs/tags/${TAG}`, `refs/tags/${TAG}^{}`],
+      "git", ["ls-remote", `https://github.com/${REPO}`, `refs/tags/${tag}`, `refs/tags/${tag}^{}`],
       { timeout: 30_000 },
     );
     const refs = Object.fromEntries(stdout.trim().split("\n").filter(Boolean).map((l) => l.split("\t").reverse()));
-    const sha = refs[`refs/tags/${TAG}^{}`] ?? refs[`refs/tags/${TAG}`] ?? null; // annotated tags peel to the commit
+    const sha = refs[`refs/tags/${tag}^{}`] ?? refs[`refs/tags/${tag}`] ?? null; // annotated tags peel to the commit
     return { exists: Boolean(sha), sha };
   } catch (e) {
     console.warn(`results: git ls-remote failed (${e.message.split("\n")[0]}); falling back to a raw fetch`);
-    const res = await fetch(rawUrl(`refs/tags/${TAG}`), { method: "HEAD" });
+    const res = await fetch(rawUrl(`refs/tags/${tag}`, doc), { method: "HEAD" });
     if (res.status === 404) return { exists: false, sha: null };
-    if (!res.ok) throw new Error(`results: could not tell whether ${TAG} exists (HTTP ${res.status})`);
+    if (!res.ok) throw new Error(`results: could not tell whether ${tag} exists (HTTP ${res.status})`);
     return { exists: true, sha: null };
   }
 }
 
-const rawUrl = (ref) => `https://raw.githubusercontent.com/${REPO}/${ref}/${DOC}`;
+const rawUrl = (ref, doc) => `https://raw.githubusercontent.com/${REPO}/${ref}/${doc}`;
 
 // The page shows the "## Draft" section only, ending at the next level-2
 // heading: the preamble, the provenance notes and the filling rules are for
@@ -60,53 +58,75 @@ function extractDraft(text) {
     .slice(start, end)
     .join("\n")
     .replace(/^## Draft\s*\n/, "")
-    .replace(/\n-{3,}\s*$/, "\n")        // the horizontal rule before ## Rules
+    .replace(/\n-{3,}\s*$/, "\n")        // the horizontal rule before the next section
     .replace(/^### /gm, "## ")           // the draft's sections sit under the page's own h1
     .trim() + "\n";
 }
 
+// The summary's first heading is its one-sentence headline; the Results
+// index shows it as the release's title.
+function headline(draft) {
+  const m = draft.match(/^## (.+)$/m);
+  if (!m) throw new Error("results: summary has no headline heading");
+  return m[1].trim();
+}
+
 // Relative links in the summary point at repo files beside it; resolve them
 // to GitHub at the tagged commit so they keep meaning exactly that version.
-function absolutizeLinks(md, ref) {
-  const base = `https://github.com/${REPO}/blob/${ref}/docs/`;
+function absolutizeLinks(md, ref, doc) {
+  const base = `https://github.com/${REPO}/blob/${ref}/${doc.replace(/[^/]+$/, "")}`;
   return md.replace(/\]\((?!https?:|mailto:|#|\/)([^)\s]+)\)/g, (_, href) => `](${new URL(href, base).href})`);
 }
 
-async function main() {
-  const dir = fileURLToPath(OUT);
-  await rm(dir, { recursive: true, force: true });
-  await mkdir(dir, { recursive: true });
-
-  const { exists, sha } = await resolveTag();
+async function fetchRelease(r) {
+  const { exists, sha } = await resolveTag(r.tag, r.summary);
   const meta = {
+    ...r,
     state: exists ? "published" : "pending",
-    tag: TAG,
     sha,
-    release_url: `https://github.com/${REPO}/releases/tag/${encodeURIComponent(TAG)}`,
+    release_url: `https://github.com/${REPO}/releases/tag/${encodeURIComponent(r.tag)}`,
     summary_url: null,
     audit_url: null,
-    checked_at: new Date().toISOString(),
+    headline: null,
   };
+  if (!exists) return meta;
 
-  if (exists) {
-    const ref = sha ?? `refs/tags/${TAG}`;
-    const res = await fetch(rawUrl(ref));
-    if (!res.ok) throw new Error(`results: tag ${TAG} exists but ${DOC} could not be read at it (HTTP ${res.status})`);
-    const draft = extractDraft(await res.text());
+  const ref = sha ?? `refs/tags/${r.tag}`;
+  const res = await fetch(rawUrl(ref, r.summary));
+  if (!res.ok) throw new Error(`results: tag ${r.tag} exists but ${r.summary} could not be read at it (HTTP ${res.status})`);
+  const draft = extractDraft(await res.text());
 
-    // The repo's own publishability check: no placeholder may survive. A tag
-    // over an unfilled page should never happen; if it does, publish nothing.
-    const left = draft.split("\n").filter((l) => l.includes("\u2039") || l.includes("\u203A"));
-    if (left.length) throw new Error(`results: ${left.length} unfilled placeholder line(s) at ${TAG}:\n${left.slice(0, 5).join("\n")}`);
+  // The repo's own publishability check: no placeholder may survive. A tag
+  // over an unfilled page should never happen; if it does, publish nothing.
+  const left = draft.split("\n").filter((l) => l.includes("‹") || l.includes("›"));
+  if (left.length) throw new Error(`results: ${left.length} unfilled placeholder line(s) at ${r.tag}:\n${left.slice(0, 5).join("\n")}`);
 
-    const blobRef = sha ?? TAG;
-    meta.summary_url = `https://github.com/${REPO}/blob/${blobRef}/${DOC}`;
-    meta.audit_url = `https://github.com/${REPO}/blob/${blobRef}/${AUDIT}`;
-    await writeFile(new URL("summary.md", OUT), absolutizeLinks(draft, blobRef));
+  const blobRef = sha ?? r.tag;
+  meta.summary_url = `https://github.com/${REPO}/blob/${blobRef}/${r.summary}`;
+  meta.audit_url = `https://github.com/${REPO}/blob/${blobRef}/${r.audit}`;
+  meta.headline = headline(draft);
+  const dir = new URL(`${r.slug}/`, OUT);
+  await mkdir(dir, { recursive: true });
+  await writeFile(new URL("summary.md", dir), absolutizeLinks(draft, blobRef, r.summary));
+  return meta;
+}
+
+async function main() {
+  await rm(fileURLToPath(OUT), { recursive: true, force: true });
+  await mkdir(OUT, { recursive: true });
+
+  const slugs = RELEASES.map((r) => r.slug);
+  if (new Set(slugs).size !== slugs.length) throw new Error("results: duplicate release slug");
+
+  const releases = [];
+  for (const r of RELEASES) {
+    const meta = await fetchRelease(r);
+    releases.push(meta);
+    console.log(meta.state === "published"
+      ? `results: ${r.slug} published from ${r.tag} @ ${meta.sha ?? "unknown sha"}`
+      : `results: ${r.slug} not tagged yet; listed as upcoming`);
   }
-
-  await writeFile(new URL("meta.json", OUT), JSON.stringify(meta, null, 1));
-  console.log(exists ? `results: published from ${TAG} @ ${sha ?? "unknown sha"}` : `results: ${TAG} not tagged yet; page shows its pending state`);
+  await writeFile(new URL("index.json", OUT), JSON.stringify({ checked_at: new Date().toISOString(), releases }, null, 1));
 }
 
 main().catch((e) => { console.error(e.message ?? e); process.exit(1); });

@@ -3,8 +3,8 @@
 import "../styles/global.css";
 const { title, description = "A public, timestamped ledger of AI predictions about U.S. Supreme Court events.", wide = false, noindex = false } = Astro.props;
 const path = Astro.url.pathname.replace(/\/$/, "") || "/";
-// Results is always in the nav: before the release tag exists it shows its
-// pending state, and the first rebuild after the tag publishes it in place.
+// Results is always in the nav: it lists every release, published or upcoming,
+// and stays the current section on each release's own page under /results/.
 const nav = [
   ["/how-it-works", "How it works"],
   ["/ledger", "Ledger"],
@@ -43,7 +43,7 @@ const fullTitle = path === "/" ? "FedCourtsAI" : `${title} — FedCourtsAI`;
         <a class="brand" href="/">FedCourtsAI</a>
         <nav aria-label="Site">
           {nav.map(([href, label]) => (
-            <a href={href} aria-current={path === href ? "page" : undefined}>{label}</a>
+            <a href={href} aria-current={path === href ? "page" : path.startsWith(`${href}/`) ? "true" : undefined}>{label}</a>
           ))}
         </nav>
       </div>
