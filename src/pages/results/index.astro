@@ -1,0 +1,66 @@
+---
+// The Results index: every results release, newest first, each linking to its
+// own page at /results/<slug>. Releases listed before their tag exists show
+// as upcoming. Scores are never pooled across releases here.
+import Base from "../../layouts/Base.astro";
+import Signup from "../../components/Signup.astro";
+import { published, upcoming, longDate } from "../../lib/results-data.js";
+---
+<Base
+  title="Results"
+  description="Scored releases of FedCourtsAI: AI forecasts of Supreme Court actions, each committed before the Court acted and graded against what it did."
+  wide
+>
+  <h1>Results</h1>
+  <p class="intro">
+    Each release scores a set of forecasts against what the Court did. A release is fixed at its tag in the{" "}
+    <a href="https://github.com/ModelMirrorAI/fedcourtsai">public repository</a>: its page shows the summary committed
+    there, and later releases add to it rather than revise it. Scores are not combined across releases.
+  </p>
+
+  {upcoming.length > 0 && (
+    <section class="releases" aria-labelledby="upcoming-h">
+      <h2 id="upcoming-h">Upcoming</h2>
+      <ul>
+        {upcoming.map((r) => (
+          <li class="release upcoming">
+            <p class="stamp">{r.label} · publishes after the Court acts</p>
+            <p class="covers">{r.covers}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+
+  {published.length > 0 ? (
+    <section class="releases" aria-labelledby="published-h">
+      {upcoming.length > 0 && <h2 id="published-h">Published</h2>}
+      <ul>
+        {published.map((r) => (
+          <li class="release">
+            <p class="stamp">{r.label} · {longDate(r.published)} · tag {r.tag}</p>
+            <h3><a href={`/results/${r.slug}`}>{r.headline}</a></h3>
+            <p class="covers">{r.covers}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ) : (
+    <p>No release has been published yet. Until one is, the <a href="/ledger">ledger</a> lists every forecast as it was committed.</p>
+  )}
+
+  <Signup lead="Get an email when the next release is published" />
+</Base>
+
+<style>
+  .intro { max-width: var(--wide); }
+  .releases ul { list-style: none; padding: 0; margin: 0; }
+  .release { border-top: 1px solid var(--rule); padding: 1.1rem 0 0.4rem; }
+  .release:last-child { border-bottom: 1px solid var(--rule); }
+  .release .stamp { margin: 0 0 0.3rem; }
+  .release h3 { font-size: 1.2rem; line-height: 1.35; margin: 0 0 0.4rem; }
+  .release h3 a { text-decoration: none; }
+  .release h3 a:hover { text-decoration: underline; }
+  .covers { margin: 0 0 0.6rem; color: var(--muted); }
+  .upcoming .covers { color: inherit; }
+</style>

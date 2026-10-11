@@ -1,0 +1,52 @@
+---
+// One results release. Renders the public summary committed in the fedcourtsai
+// repo, read at the release's tag by scripts/fetch-results.mjs. Nothing here is
+// computed or edited: the summary is shown as committed, and on any
+// disagreement the repo wins. Only published releases get a page; upcoming
+// ones are listed on the Results index.
+import Base from "../../layouts/Base.astro";
+import Signup from "../../components/Signup.astro";
+import { published, summaryFor, longDate, RESULTS_REPO } from "../../lib/results-data.js";
+
+export function getStaticPaths() {
+  return published.map((release) => ({ params: { slug: release.slug }, props: { release } }));
+}
+
+const { release: r } = Astro.props;
+const { Content } = summaryFor(r.slug);
+const REPO = `https://github.com/${RESULTS_REPO}`;
+const short = r.sha ? r.sha.slice(0, 7) : null;
+---
+<Base title={`Results: ${r.label}`} description={r.headline} wide>
+  <p class="crumb"><a href="/results">← All results</a></p>
+  <h1>{r.label}</h1>
+  <p>
+    <span class="stamp">
+      Published {longDate(r.published)} · tag <a href={r.release_url}>{r.tag}</a>{short && <> · commit <a href={`${REPO}/commit/${r.sha}`}>{short}</a></>}
+    </span>
+  </p>
+  <article class="results-body">
+    <Content />
+  </article>
+  <p class="results-source"><small>
+    This page is the <a href={r.summary_url}>public summary</a> committed at the tag above, shown without changes.{" "}
+    Every figure in it is copied from the <a href={r.audit_url}>audit write-up</a> or the release’s dataset export,{" "}
+    and if this page and either one disagree, the source is right and this page is wrong.
+  </small></p>
+  <Signup lead="Get an email when the next release is published" />
+</Base>
+
+<style>
+  .crumb { margin: 0 0 0.25rem; font-size: 0.95rem; }
+
+  /* The summary's own sections: its first heading is the release headline.
+     Prose runs the full wide column on desktop, like its tables, rather than
+     stopping at the reading measure and leaving the right side blank. */
+  .results-body { max-width: var(--wide); }
+  .results-body :global(> h2:first-child) { font-size: 1.45rem; margin-top: 0.5rem; }
+  /* Tables scroll inside themselves on narrow screens; the page never does. */
+  .results-body :global(table) { display: block; overflow-x: auto; max-width: 100%; margin-bottom: 1.4em; }
+  .results-body :global(th) { white-space: nowrap; }
+  .results-body :global(td:first-child) { min-width: 12ch; }
+  .results-source { margin-top: 2.5rem; border-top: 1px solid var(--rule); padding-top: 1rem; }
+</style>
