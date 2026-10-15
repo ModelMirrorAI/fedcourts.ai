@@ -1,0 +1,40 @@
+# The site's required check: a clean install and a full production build,
+# including the prebuild fetches from the fedcourtsai repo, on every pull
+# request into `main` and on `main` itself. It is the same build Cloudflare
+# Pages runs, so a red check here is a deploy that would fail there. It holds
+# no secret and needs nothing but read on this repository; the fetches read
+# the public fedcourtsai repo anonymously.
+name: build
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
