@@ -1,0 +1,4 @@
+# Every pull request into `main` needs the maintainer's approval (the `main`
+# ruleset), so the maintainer owns everything: this line requests their review
+# on each PR automatically.
+* @modelmirror
