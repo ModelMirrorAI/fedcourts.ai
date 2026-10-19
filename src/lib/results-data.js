@@ -1,8 +1,9 @@
 // Results releases as written by scripts/fetch-results.mjs at build time:
 // every release's metadata, and each published release's summary as a
 // rendered Markdown module. Nothing here is computed or edited.
-export { RESULTS_REPO } from "./releases.js";
 const indexFile = Object.values(import.meta.glob("../data/results/index.json", { eager: true, import: "default" }))[0];
+
+export const RESULTS_REPO = indexFile?.repo;
 const summaries = import.meta.glob("../data/results/*/summary.md", { eager: true });
 
 export const releases = indexFile?.releases ?? [];
