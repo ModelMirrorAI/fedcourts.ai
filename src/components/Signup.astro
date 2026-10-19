@@ -3,11 +3,8 @@
 // No JavaScript, no third-party script, nothing loaded from Buttondown until
 // someone submits. After submitting, Buttondown redirects to /subscribe/check-email;
 // the confirmation link lands on /subscribe/confirmed (both set in Buttondown's
-// settings). The checkbox sets a Buttondown tag on the subscriber; the weekly
-// update is addressed only to subscribers carrying `weekly-scotus`, and release
-// emails go to the whole list.
+// settings).
 const { lead = "Get an email when there's a new release", id = "signup-email" } = Astro.props;
-const weeklyId = `${id}-weekly`;
 ---
 <form class="signup" action="https://buttondown.com/api/emails/embed-subscribe/fedcourtsai" method="post">
   <label for={id}>{lead}</label>
@@ -16,11 +13,7 @@ const weeklyId = `${id}-weekly`;
     <input type="hidden" name="embed" value="1" />
     <button type="submit">Sign up</button>
   </div>
-  <div class="signup-option">
-    <input type="checkbox" name="tag" value="weekly-scotus" id={weeklyId} checked />
-    <label for={weeklyId}>Also send the weekly Supreme Court update</label>
-  </div>
-  <small>Release emails 2–4 times a year; the weekly update only in weeks with something to report. Unsubscribe anytime. <a href="/privacy#email-updates">How your address is used</a>.</small>
+  <small>2–4 emails a year, around releases. Unsubscribe anytime. <a href="/privacy#email-updates">How your address is used</a>.</small>
 </form>
 
 <style>
@@ -39,7 +32,5 @@ const weeklyId = `${id}-weekly`;
     border: 1px solid var(--accent); border-radius: 3px; padding: 0.4rem 1rem;
   }
   .signup button:hover { background: var(--accent-soft); }
-  .signup-option { display: flex; align-items: baseline; gap: 0.4rem; margin-bottom: 0.35rem; }
-  .signup-option label { display: inline; font-weight: normal; margin: 0; }
   .signup small { display: block; }
 </style>
