@@ -85,7 +85,9 @@ function checkManifest(m) {
       if (typeof r?.[f] !== "string" || !r[f].trim()) bad(`entry ${name} has no ${f}`);
     }
     if (!SLUG.test(r.slug)) bad(`entry ${name} has a slug that is not URL-safe`);
-    if (!r.tag.startsWith("results/")) bad(`entry ${name} has a tag outside results/`);
+    // The page at /results/<slug> shows the documents read at the tag, so the
+    // two must name the same release.
+    if (r.tag !== `results/${r.slug}`) bad(`entry ${name} has tag ${r.tag}, expected results/${r.slug}`);
     if (!ISO_DATE.test(r.published)) bad(`entry ${name} has a published date that is not YYYY-MM-DD`);
     if (!DOC.test(r.summary) || !DOC.test(r.audit) || /(^|\/)\.\.(\/|$)/.test(r.summary + "/" + r.audit)) bad(`entry ${name} names a document outside docs/`);
   }
