@@ -136,7 +136,7 @@ const isCurrent = (read, eventId) => {
     <div class="picks">
       {ids.map((id, i) => <input type="radio" class="pick" name={`pick-${slug}`} id={id} checked={i === selected} />)}
     </div>
-    <CaseTimeline events={events} ids={ids} moment={row.moment} outcomeLines={row.outcome_lines} />
+    <CaseTimeline events={events} ids={ids} moment={row.moment} outcomeLines={row.outcome_lines} scheduled={row.scheduled} />
     <h3 class="predictions-head">The models' predictions</h3>
     {events.length > 1 && <p class="pick-hint">The models predicted this case at {events.length} points. The highlighted step's predictions are shown; choose another marked step on the timeline to see the others.</p>}
     <div class="events">
