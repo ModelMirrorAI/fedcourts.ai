@@ -8,11 +8,18 @@
 // the track of the case's current moment, where a row carrying `outcome_lines`
 // (big-cases.json 1.2) replaces that generic text with the harness's fixed
 // sentences naming the parties. Those lines describe the actions open at the
-// moment, so they never move to another track or outlive its decision.
+// moment, so they never move to another track or outlive its decision. A row
+// carrying `scheduled` (big-cases.json 1.3) puts the conference the docket is
+// distributed for on that same undecided step. The pipeline already drops a
+// conference that had passed when it wrote the schedule; one that has passed
+// since, by the day this page is built, is dropped here too, so a past date is
+// never shown as upcoming.
 import { momentFor } from "../lib/moments.js";
 
-const { events = [], ids = [], moment = null, outcomeLines = null } = Astro.props;
+const { events = [], ids = [], moment = null, outcomeLines = null, scheduled = null } = Astro.props;
 const momentStage = moment ? momentFor(moment)?.stage ?? "cert" : null;
+const buildDay = new Date().toISOString().slice(0, 10);
+const nextConference = scheduled?.kind === "conference" && String(scheduled.date) >= buildDay ? scheduled.date : null;
 // Consequence words only: which action the line is about, never how likely it is.
 const IF_WORDS = { granted: "If granted", denied: "If denied", reversed: "If reversed", affirmed: "If affirmed", vacated: "If vacated" };
 
@@ -96,7 +103,13 @@ const rendered = tracks.map((t) => {
   steps.forEach((s, i) => { if (s.pick || (s.decision && s.outcome)) reached = i; });
   // The current moment's lines, on its own track only (a merits moment's lines sit on Merits, never on Petition).
   const lines = outcomeLines?.length && t.stage === momentStage ? outcomeLines : null;
-  return { ...t, lines, steps: steps.map((s, i) => ({ ...s, done: i <= reached, now: i === reached && !s.decision })) };
+  // A conference decides a petition or an application, never a merits case.
+  const next = nextConference && t.stage === momentStage && t.stage !== "merits" ? nextConference : null;
+  return {
+    ...t,
+    lines,
+    steps: steps.map((s, i) => ({ ...s, done: i <= reached, now: i === reached && !s.decision, next: s.decision && !s.outcome ? next : null })),
+  };
 });
 ---
 {rendered.length > 0 && (
@@ -113,6 +126,7 @@ const rendered = tracks.map((t) => {
                 <span class="step-label">{s.label}</span>
                 {s.decision && s.outcome && <span class="step-outcome">{s.outcome}</span>}
                 {date && <span class="step-date">{date}</span>}
+                {s.next && <span class="step-next">Conference {longDate(s.next)}</span>}
                 {s.pick && <span class="step-pred">predicted</span>}
               </Fragment>
             );
