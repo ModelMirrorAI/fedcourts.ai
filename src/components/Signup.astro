@@ -4,7 +4,12 @@
 // someone submits. After submitting, Buttondown redirects to /subscribe/check-email;
 // the confirmation link lands on /subscribe/confirmed (both set in Buttondown's
 // settings).
-const { lead = "Get an email when there's a new release", id = "signup-email" } = Astro.props;
+//
+// Each checkbox sends a `tag` that Buttondown attaches to the subscriber; the
+// pipeline addresses each feed's emails to its tag. Release announcements go to
+// everyone and need no box. The AI-case boxes record interest ahead of that
+// feed, which says so on its label.
+const { lead = "Get FedCourtsAI updates by email", id = "signup-email" } = Astro.props;
 ---
 <form class="signup" action="https://buttondown.com/api/emails/embed-subscribe/fedcourtsai" method="post">
   <label for={id}>{lead}</label>
@@ -13,7 +18,13 @@ const { lead = "Get an email when there's a new release", id = "signup-email" } 
     <input type="hidden" name="embed" value="1" />
     <button type="submit">Sign up</button>
   </div>
-  <small>2–4 emails a year, around releases. Unsubscribe anytime. <a href="/privacy#email-updates">How your address is used</a>.</small>
+  <fieldset class="signup-feeds">
+    <legend>Release announcements, 2–4 a year, plus:</legend>
+    <label><input type="checkbox" name="tag" value="weekly-scotus" checked /><span>Weekly Supreme Court update: what resolved against each model's forecast, and the week's new forecasts</span></label>
+    <label><input type="checkbox" name="tag" value="ai-cases" /><span>AI cases: new filings and rulings in AI-related litigation <span class="soon">(starting later)</span></span></label>
+    <label class="nested"><input type="checkbox" name="tag" value="ai-cases-predictions" /><span>…with the models' forecasts on those cases</span></label>
+  </fieldset>
+  <small>Unsubscribe or change these anytime. <a href="/privacy#email-updates">How your address is used</a>.</small>
 </form>
 
 <style>
@@ -33,4 +44,13 @@ const { lead = "Get an email when there's a new release", id = "signup-email" } 
   }
   .signup button:hover { background: var(--accent-soft); }
   .signup small { display: block; }
+  .signup-feeds { border: 0; margin: 0 0 0.5rem; padding: 0; max-width: 40rem; }
+  .signup-feeds legend { padding: 0; margin-bottom: 0.25rem; font-size: 0.95em; }
+  .signup-feeds label {
+    display: flex; gap: 0.45rem; align-items: baseline;
+    font-weight: 400; font-size: 0.95em; margin: 0 0 0.2rem;
+  }
+  .signup-feeds input { accent-color: var(--accent); flex: none; }
+  .signup-feeds label.nested { padding-left: 1.6rem; }
+  .signup-feeds .soon { color: var(--muted); }
 </style>
