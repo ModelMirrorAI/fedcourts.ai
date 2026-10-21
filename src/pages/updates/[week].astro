@@ -1,0 +1,33 @@
+---
+// One week's update, shown as the fedcourtsai pipeline committed it.
+import Base from "../../layouts/Base.astro";
+import Signup from "../../components/Signup.astro";
+import { weeks, updateFor, sourceUrl } from "../../lib/updates-data.js";
+
+export function getStaticPaths() {
+  return weeks.map((entry) => ({ params: { week: entry.week }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = updateFor(entry.week);
+---
+<Base title={entry.title} description={`The FedCourtsAI weekly update for ${entry.week}.`} wide>
+  <p class="crumb"><a href="/updates">← All updates</a></p>
+  <h1>{entry.title}</h1>
+  <article class="update-body">
+    <Content />
+  </article>
+  <p class="update-source"><small>
+    This page is the <a href={sourceUrl(entry)}>committed update</a> for {entry.week}, shown without changes.{" "}
+    It was generated from the ledger when the week ended and is not updated afterwards.
+  </small></p>
+  <Signup lead="Get the weekly update by email" />
+</Base>
+
+<style>
+  .crumb { margin: 0 0 0.25rem; font-size: 0.95rem; }
+  .update-body { max-width: var(--wide); }
+  .update-body :global(h2) { font-size: 1.2rem; }
+  .update-body :global(h3) { font-size: 1.05rem; }
+  .update-source { margin-top: 2.5rem; border-top: 1px solid var(--rule); padding-top: 1rem; }
+</style>

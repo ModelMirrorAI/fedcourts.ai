@@ -22,8 +22,9 @@ const BRANCH = "main";
 const TARBALL = `https://codeload.github.com/${REPO}/tar.gz/refs/heads/${BRANCH}`;
 const COMMITS_FEED = `https://github.com/${REPO}/commits/${BRANCH}.atom`;
 const OUT = new URL("../src/data/ledger.json", import.meta.url);
+const UPDATES_OUT = new URL("../src/data/updates/", import.meta.url);
 
-const WANT = /^[^/]+\/(metrics\/[^/]+\.json|data\/qp-topics\/qp-topics\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
+const WANT = /^[^/]+\/(metrics\/[^/]+\.json|metrics\/updates\/\d{4}-W\d{2}\.md|data\/qp-topics\/qp-topics\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
 
 // A case summary (docs/case-summaries.md in the ledger repo): YAML front matter
 // written by the harness, then "## " sections of plain prose — three under body
@@ -49,6 +50,29 @@ function parseSummary(text) {
     generated_at: front.generated_at ? String(front.generated_at) : null,
     sections,
   };
+}
+
+// The weekly public updates (metrics/updates/<YYYY-Www>.md in the ledger repo):
+// one file per week the email list was offered, written once by the pipeline
+// and never re-rendered. Copied as committed, minus the first-line heading,
+// which goes in the index as the week's title. A file whose first line is not
+// a heading fails the build rather than publishing an untitled update.
+async function copyUpdates(dir) {
+  await rm(fileURLToPath(UPDATES_OUT), { recursive: true, force: true });
+  await mkdir(UPDATES_OUT, { recursive: true });
+  const weeks = [];
+  for await (const f of glob("*.md", { cwd: join(dir, "metrics", "updates") })) {
+    const week = f.slice(0, -3);
+    if (!/^\d{4}-W\d{2}$/.test(week)) continue;
+    const text = await readFile(join(dir, "metrics", "updates", f), "utf8");
+    const m = text.match(/^# (.+)\n+([\s\S]*)$/);
+    if (!m) throw new Error(`updates: metrics/updates/${f} does not open with a heading`);
+    await writeFile(new URL(`${week}.md`, UPDATES_OUT), m[2]);
+    weeks.push({ week, title: m[1].trim(), path: `metrics/updates/${f}` });
+  }
+  weeks.sort((a, b) => b.week.localeCompare(a.week));
+  await writeFile(new URL("index.json", UPDATES_OUT), JSON.stringify({ weeks }, null, 1));
+  return weeks.length;
 }
 
 async function headCommit() {
@@ -206,7 +230,8 @@ async function main() {
     };
     await mkdir(dirname(fileURLToPath(OUT)), { recursive: true });
     await writeFile(OUT, JSON.stringify(out, null, 1));
-    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${Object.keys(summaries).length} case summaries, ${Object.keys(topics).length} topic labels, sha ${head.sha ?? "unknown"}`);
+    const updates = await copyUpdates(dir);
+    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${Object.keys(summaries).length} case summaries, ${Object.keys(topics).length} topic labels, ${updates} weekly updates, sha ${head.sha ?? "unknown"}`);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

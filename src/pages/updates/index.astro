@@ -1,0 +1,62 @@
+---
+// The weekly updates: the latest week in full, then every earlier week, each
+// linking to its own page at /updates/<YYYY-Www>. Each is the update the
+// fedcourtsai pipeline rendered from the ledger for that week's email, shown
+// as committed there.
+import Base from "../../layouts/Base.astro";
+import Signup from "../../components/Signup.astro";
+import { weeks, updateFor, sourceUrl } from "../../lib/updates-data.js";
+
+const [latest, ...earlier] = weeks;
+const Latest = latest ? updateFor(latest.week).Content : null;
+---
+<Base
+  title="Weekly updates"
+  description="Each week's FedCourtsAI update: what the Supreme Court resolved against each model's forecast, and the week's new forecasts."
+  wide
+>
+  <h1>Weekly updates</h1>
+  <p class="intro">
+    Each week's update lists what the Court resolved against what each model forecast in advance, and the forecasts
+    newly committed to the <a href="/ledger">ledger</a>. It is generated from the ledger, not written, and is kept
+    here as it was generated, one page per week. A week with nothing to report has no update.
+  </p>
+
+  {latest ? (
+    <>
+      <section class="update" aria-labelledby="latest-h">
+        <p class="stamp">Latest · {latest.week}</p>
+        <h2 id="latest-h"><a href={`/updates/${latest.week}`}>{latest.title}</a></h2>
+        <article class="update-body"><Latest /></article>
+        <p class="update-source"><small>The <a href={sourceUrl(latest)}>committed update</a> in the public repository.</small></p>
+      </section>
+      {earlier.length > 0 && (
+        <section class="earlier" aria-labelledby="earlier-h">
+          <h2 id="earlier-h">Earlier updates</h2>
+          <ul>
+            {earlier.map((w) => (
+              <li><a href={`/updates/${w.week}`}>{w.title}</a></li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  ) : (
+    <p>No update has been published yet. The first one appears here after the week it covers ends.</p>
+  )}
+
+  <Signup lead="Get the weekly update by email" />
+</Base>
+
+<style>
+  .intro { max-width: var(--wide); }
+  .update .stamp { margin: 1.5rem 0 0.2rem; }
+  .update h2 { margin-top: 0; }
+  .update-body { max-width: var(--wide); }
+  .update-body :global(h2) { font-size: 1.2rem; }
+  .update-body :global(h3) { font-size: 1.05rem; }
+  .update-source { margin-top: 1.5rem; }
+  .earlier ul { list-style: none; padding: 0; margin: 0; }
+  .earlier li { border-top: 1px solid var(--rule); padding: 0.6rem 0; }
+  .earlier li:last-child { border-bottom: 1px solid var(--rule); }
+</style>
