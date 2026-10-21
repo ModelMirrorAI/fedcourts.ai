@@ -58,9 +58,9 @@ const caseLabel = (r) => r.title ?? `${r.court}/${r.docket}`;
   </div>
 )}
 <p><small>
-  Scope is <em>frozen</em> when every prediction on the event carries a process stamp at or after the freeze instant
-  {frozen_process.since ? ` (${day(frozen_process.since)})` : ""}; otherwise the event is <em>shakedown</em> and nothing is claimed from it.
-  Links open the event's directory at the commit this build read.
+  An event is <em>frozen</em> when every prediction on it carries a process stamp from the freeze
+  {frozen_process.since ? ` (${day(frozen_process.since)})` : ""} or later; otherwise it is <em>shakedown</em>, and nothing is claimed from it.
+  Links open the event's folder at the commit this page was built from.
 </small></p>
 
 <style>

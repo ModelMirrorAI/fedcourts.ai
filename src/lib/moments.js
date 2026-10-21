@@ -46,7 +46,7 @@ const STAGES = {
 const m = (stage, when) => ({ stage, when, ...STAGES[stage] });
 
 export const MOMENTS = {
-  "evt-petition-arrival-disposition": m("cert", "when the petition was docketed, before it was distributed or the docket showed anything"),
+  "evt-petition-arrival-disposition": m("cert", "when the petition was docketed, before anything else happened on the docket"),
   "evt-petition-disposition": m("cert", "once the petition was distributed for conference (and again after each relist)"),
   "evt-order-cvsg-disposition": m("cert", "after the Court asked for the Solicitor General's views"),
   "evt-motion-disposition": m("interim", "when the application arrived"),

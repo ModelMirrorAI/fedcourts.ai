@@ -6,21 +6,21 @@ import EventKey from "../components/EventKey.astro";
 import Signup from "../components/Signup.astro";
 ---
 <Base title="FedCourtsAI" description="Which Supreme Court cases matter, according to three frontier AI models — called before the Court acts, on a public, timestamped ledger." wide>
-  <h1>Which Supreme Court cases matter, called before the Court acts</h1>
+  <h1>Which Supreme Court cases matter? AI models call it before the Court acts</h1>
   <p>
     Three AI models (Claude from Anthropic, Codex from OpenAI, and Gemini from Google) read cases pending at the
-    Supreme Court and predict what the Court will do. Every prediction is saved to a public record with a timestamp
+    Supreme Court and predict what the Court will do. Every prediction is timestamped and saved to a public record
     before the Court acts, so anyone can check later how the models did. <a href="/how-it-works">How it works</a>.
   </p>
   <p>
     This page ranks the cases the models think matter most. Each model gives every case a <strong>big-case score</strong> from 0
-    (routine) to 1 (landmark). Because the scores are recorded in advance, what counted as a big case
-    can't be redefined after the term ends.
+    (routine) to 1 (landmark). Because the scores are recorded in advance, no one can redefine what counted as a big
+    case after the term ends.
   </p>
   <p>
     <small>
       The score is an opinion, not a forecast: it isn't graded, and a high score doesn't mean the Court will take the case.
-      Tap a case to see each model's reasoning and its predictions.
+      Tap a case to see each model's predictions and its reasoning.
     </small>
   </p>
   <Signup />
