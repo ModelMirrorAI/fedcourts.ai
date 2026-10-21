@@ -101,15 +101,15 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
       </details>
     )}
 
-    <p class="no-match" hidden>No cases on the board match. The board lists only cases the models have predicted and scored; the <a href="/ledger">ledger</a> has every predicted event.</p>
+    <p class="no-match" hidden>No cases match. The board lists only cases the models have predicted and scored; the <a href="/ledger">ledger</a> has every predicted event.</p>
     <p class="foot">
       {board.cases} cases · {board.scored_reads} scores
       {board.rows_with_leakage_flag > 0 && <span> · {board.rows_with_leakage_flag} with a <a href="#possible-leak">possible leak</a></span>}
-      {board.cases_without_score > 0 && <span> · {board.cases_without_score} predicted cases carry no score and are not listed</span>}
+      {board.cases_without_score > 0 && <span> · {board.cases_without_score} predicted cases have no score and aren't listed</span>}
     </p>
   </section>
 ) : (
-  <div class="empty"><p>The big-case board has not been published to the ledger yet.</p></div>
+  <div class="empty"><p>The big-case board hasn't been published to the ledger yet.</p></div>
 )}
 
 <script>

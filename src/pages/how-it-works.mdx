@@ -4,88 +4,104 @@ title: How it works
 description: Frontier AI models commit predictions about Supreme Court events to a public git ledger before the Court acts, then grade each other once it has.
 ---
 
-**In short.** Three AI models predict what the Supreme Court will do in real cases before the Court acts. Each prediction is written to a public record with a timestamp, and scored later against what the Court actually did. Because the answer doesn't exist yet when the prediction is made, the models can't have memorised it.
+**In short.** Three AI models predict what the Supreme Court will do in real cases, before the Court acts. Each prediction is timestamped and saved to a public record, then scored against what the Court actually did. Because the answer doesn't exist yet when the prediction is made, the models can't have memorized it.
 
-FedCourtsAI asks a simple question: when a frontier AI model reads a case that is actually pending before the Supreme Court, and commits to a prediction before the Court acts, how good is that prediction? Not on a benchmark the model may have seen during training, and not on cases whose outcomes are already written down somewhere, but on the live docket, where the answer key does not exist yet.
-
-The design follows from that question. Predictions are made before outcomes, written to a public repository with a timestamp, and scored later against what the Court actually did.
+FedCourtsAI asks a simple question: when a frontier AI model reads a case that is actually pending before the Supreme Court, and commits to a prediction before the Court acts, how good is that prediction? Not on a benchmark the model may have seen in training, and not on cases whose outcomes are already written down somewhere, but on the live docket, where the answer key doesn't exist yet. Everything below follows from that question.
 
 ## The events
 
-A prediction is about one **event**: one question about one case, asked at one point in the case's life. There are three stages, each with its own question.
+Each prediction is about one **event**: one question about one case, asked at one point in the case's life. A case can pass through three stages, and each stage has its own question.
 
 - **Cert.** Will the Court take the case? Asked when a petition is docketed, again when it is distributed for conference (and after each relist), and again if the Court asks for the Solicitor General's views.
 - **Interim.** Will the Court grant an emergency application for a stay or an injunction? Asked when the application arrives, after the Court calls for a response, and once the response is filed.
-- **Merits.** Will the Court disturb the judgment below? Asked at the cert grant and again once both sides' merits briefs are in.
+- **Merits.** Will the Court disturb the judgment below? Asked when the Court agrees to hear the case, and again once both sides' merits briefs are in.
 
-These moments are declared in advance, in a closed table in the code. A case is predicted when it enters the pool and re-predicted only when something about it changes: a distribution, a relist, a call for the Solicitor General's views, a new filing. Nothing runs on a fixed clock, and a maintainer cannot pick a case by hand: each run derives its own work from the committed record.
+These moments are fixed in advance, in a closed table in the code. A case is predicted when it enters the pool, and predicted again only when something about it changes: a distribution, a relist, a call for the Solicitor General's views, a new filing. Nothing runs on a fixed clock, and no one can pick a case by hand: each run works out what it owes from the committed record.
 
 ## What a prediction contains
 
-Each prediction is a small directory in the repository, written by one model about one event. The structured part is a JSON file carrying a probability (of a grant at cert and interim; of the judgment below being disturbed at merits), a single most-likely disposition, and, at merits, a predicted judgment and vote. Beside it are three prose files: why the number is what it is, what the model expects the Court to do and on what grounds, and what the model consulted beyond the materials it was given. That third file is the model's own account of its retrieval; the harness also records the tool calls it actually made.
+Each prediction is a small folder in the repository, written by one model about one event. At its heart is a JSON file with:
 
-The reasoning matters as much as the number. A grant-or-deny call on the cert docket is close to a coin with a known bias; the harder and more interesting question is whether a model can anticipate which justices will be in the majority, who will write, and on what doctrinal ground.
+- a probability: of a grant at the cert and interim stages, or of the judgment below being disturbed at merits;
+- the single outcome the model thinks most likely;
+- at merits, a predicted judgment and vote.
+
+Beside it are three short prose files: why the number is what it is; what the model expects the Court to do, and on what grounds; and what the model consulted beyond the materials it was given. That last file is the model's own account of its research. The system separately logs every tool call the model actually made.
+
+The reasoning matters as much as the number. Predicting grant or deny on a cert petition is close to calling a coin with a known bias. The harder, more interesting question is whether a model can anticipate which justices will form the majority, who will write the opinion, and on what legal ground.
 
 ## Pre-registration is about time, not evidence
 
-A model is not restricted in what it may read. It can search, pull commentary, and consult whatever it likes; a forecaster in the world would do the same. The commitment is temporal: the prediction lands in git, on a public branch, with a timestamp from the runner, before the Court's order list is released. That timestamp, together with the workflow run that produced the commit, is what establishes that the prediction preceded the outcome.
+A model isn't restricted in what it may read. It can search the web, pull commentary, and consult whatever it likes, just as a forecaster in the real world would. The commitment is about timing: the prediction is committed to a public git branch, with a timestamp from the machine that ran it, before the Court releases its order list. That timestamp, together with the logged workflow run that produced the commit, is what shows the prediction came first.
 
-This is a deliberate choice. A forecast that is only allowed to see a curated subset of the world tests something narrower than forecasting. What the design does instead is make retrieval visible, so that a prediction which leaned on something it should not have had (a leaked outcome, say) can be identified and excluded after the fact, rather than prevented by a gate that would also prevent legitimate research.
+This is deliberate. A forecaster allowed to see only a curated slice of the world is being tested on something narrower than forecasting. Instead, the design makes research visible. If a prediction leaned on something it shouldn't have had, such as a leaked outcome, it can be spotted and excluded afterwards, without a gate that would also block legitimate research.
 
 ## Who predicts, and who grades
 
-Three model families currently compete, each running inside its own developer's agentic coding harness: Claude, Codex, and Gemini. Each reads the same provisioned case record and answers independently. A prediction is one model's answer; the tournament is the comparison between them.
+Three model families compete: Claude, Codex, and Gemini, each running inside its own developer's agentic coding tool. Each reads the same case materials and answers independently. A prediction is one model's answer; the tournament is the comparison between them.
 
-After an event resolves, the same three models act as evaluators. Each grades every prediction on the event, and grading is blind: the prediction is staged under an opaque alias with the predictor's identity masked, so a model does not know whose reasoning it is scoring, its own included. The quantitative score is arithmetic, computed by code from the outcome; the evaluator's job is the qualitative part, judging the predicted reasoning against the opinion the Court actually issued, and checking the prediction's retrieval for leakage.
+Once an event resolves, the same three models act as graders, and each grades every prediction on that event. Grading is blind: each prediction is shown under an anonymous label, so a model doesn't know whose reasoning it is scoring, even when it is its own. The numerical score is plain arithmetic, computed by code from the outcome. The grader's job is the qualitative part: judging the predicted reasoning against the opinion the Court actually issued, and checking the model's research for leaks.
 
 ## What counts
 
-Before the first term's predictions could be scored, the process was frozen: the prompts, the model configurations, and the harness settings were digested into a tagged commit, and every prediction that counts toward a reported figure must carry a stamp matching those digests from after that instant. Predictions made while the pipeline was still being built are kept in the repository, with their timestamps, and labelled as shakedown. They exercised the machinery; nothing about them was pre-registered, and nothing is claimed from them.
+Before the first term's predictions could be scored, the process was frozen. The prompts, model settings, and tool settings were fingerprinted and recorded in a tagged commit. A prediction counts toward a reported figure only if it was made after that moment and carries a stamp matching those fingerprints.
 
-When the process changes, the version changes, and results across the boundary are not pooled. Two processes on two information sets are two experiments.
+Predictions made while the pipeline was still being built stay in the repository with their timestamps, labeled as **shakedown**. They tested the machinery; nothing about them was pre-registered, and nothing is claimed from them.
+
+When the process changes, its version number changes, and results from before and after are never pooled. Two processes working from two sets of information are two separate experiments.
 
 ## How scoring works
 
-Almost every cert petition is denied, so a model that answers "denied" to everything will be right most of the time. Accuracy alone therefore says nothing. Each prediction is scored for **skill against a base rate** matched to the kind of case it is: the historical grant rate for petitions in the same salience band, so that restating the base rate earns nothing and beating it earns something. The probability is also scored for calibration with the Brier score.
+Almost every cert petition is denied, so a model that answers "denied" every time will be right most of the time. Accuracy alone tells you nothing. Instead, each prediction is scored on **skill against a base rate**: the historical grant rate for similar petitions, grouped by how prominent a case is. Simply restating the base rate earns nothing; beating it earns credit. The probability is also scored for calibration, using the Brier score.
 
-Two further scores are pre-registered alongside the forecast. A **big-case score** is each model's read of how much a case matters, explicitly not its grant likelihood; it is what the front page ranks by, and it is graded later by an independent evaluator rather than by the outcome. At merits, the predicted **vote** is scored against the actual vote.
+Two more things are pre-registered alongside each forecast. The **big-case score** is each model's view of how much a case matters, explicitly not how likely it is to be granted. It is what the front page ranks by, and it is graded later by an independent evaluator rather than by the outcome. At the merits stage, the predicted **vote** is scored against the actual vote.
 
 ## Which cases
 
-The Court decides thousands of petitions a term. Predicting all of them equally would spend the whole budget on cases that resolve exactly as the base rate says. Instead, a deterministic score ranks the eligible petitions by how much each is worth forecasting, using features a docket acquires as it moves (relists, a call for the Solicitor General's views, the originating court), and the models run on the top-ranked slice up to a fundable capacity, plus carve-outs the score cannot game: a random slice of new filings drawn from a pre-registered seed, every petition the federal government files, every case where the Court has asked the Solicitor General for its views. Once a case is in, it stays in; the record is never rewritten by a later capacity decision.
+The Court receives thousands of petitions a term. Predicting all of them would spend the whole budget on cases that turn out exactly as the base rate says. Instead, a fixed formula ranks the eligible petitions by how worthwhile each is to forecast, using signals a docket picks up as it moves, such as relists, a call for the Solicitor General's views, or the court the case came from. The models predict the top-ranked cases, as many as the budget allows.
 
-Excluded from prediction, though not from ingestion, are pro se and in forma pauperis petitions, original-jurisdiction and miscellaneous matters, and dockets whose outcome is not machine-readable. This is a budget line, not a claim that those cases do not matter.
+Some cases are always included, whatever their rank, and the ranking can't push them out:
+
+- a random sample of new filings, drawn from a seed fixed in advance;
+- every petition the federal government files;
+- every case where the Court has asked for the Solicitor General's views.
+
+Once a case is in, it stays in. A later budget decision never rewrites the record.
+
+Some cases are collected but not predicted: petitions filed without a lawyer or without paying the filing fee (*pro se* and *in forma pauperis*), original-jurisdiction and miscellaneous matters, and dockets whose outcome can't be read automatically. This is a budget line, not a judgment that those cases don't matter.
 
 ## Limitations
 
-Some of these are temporary, some are inherent in the design, and it is worth being clear about which.
+Some of these are temporary and some are built into the design. It's worth being clear about which is which.
 
-- **The numbers are small.** The first frozen cert population is on the order of a hundred events, all distributed for one conference. A hundred events cannot separate three models with any confidence, and figures from it should be read as a first look, not a ranking.
-- **The first population is not a sample of the docket.** It is the residue of earlier funded rounds, weighted toward the higher salience bands. Read it band by band, against each band's own base rate; a pooled number over it would flatter every model.
-- **The timestamps rest on GitHub, not on a notary.** Git author dates can be set to anything. What the design relies on is the runner clock the model cannot write, the public push to a protected branch, and the workflow run log that produced the commit. That is strong enough for the purpose; it is not cryptographic proof, and we do not describe it as such.
-- **Retrieval is self-reported and graded, not prevented.** A model that read an outcome it should not have had is caught by the evaluator reading its retrieval log, not by a wall. Leakage is an exclusion, not an impossibility.
-- **Three models, one harness each.** A result about "Claude" here is a result about a particular model running inside a particular coding harness with particular prompts. Changing any of those changes the process version.
-- **Cert is the easy stage.** The interesting predictions, about reasoning and votes, are only scorable at merits, and merits events resolve months after the forecast. The early results will be almost entirely grant-or-deny.
-- **Scope follows the budget.** Which cases are predicted is a function of a capacity number, and that number is a function of funding. A wider scope is a decision, not a discovery.
+- **The numbers are small.** The first frozen set of cert predictions covers roughly a hundred events, all distributed for one conference. A hundred events can't separate three models with any confidence, so figures from it are a first look, not a ranking.
+- **The first set isn't a sample of the docket.** It is what remained from earlier funded rounds, and it leans toward more prominent cases. Read it group by group, each against its own base rate; a single pooled number would flatter every model.
+- **The timestamps rest on GitHub, not on a notary.** Git dates can be set to anything. What the design relies on is the clock of the machine that ran the model, which the model can't change; the public push to a protected branch; and the logged workflow run that produced the commit. That's strong enough for this purpose, but it isn't cryptographic proof, and we don't describe it as such.
+- **Research is self-reported and graded, not prevented.** A model that read an outcome it shouldn't have is caught by a grader reading its research log, not stopped by a wall. Leakage is grounds for exclusion; it isn't made impossible.
+- **Three models, one setup each.** A result about "Claude" here is a result about one particular model, running inside one particular coding tool, with particular prompts. Changing any of those changes the process version.
+- **Cert is the easy stage.** The most interesting predictions, about reasoning and votes, can only be scored at merits, and merits cases resolve months after the forecast. Early results will be almost entirely grant-or-deny.
+- **Scope follows the budget.** How many cases are predicted depends on capacity, and capacity depends on funding. A wider scope is a decision, not a discovery.
 - **None of this is legal advice.** The predictions are experimental model outputs about how a court may act. They are not statements of fact about any judge, and not a basis for any decision. See the [terms](/terms).
 
 ## Case summaries
 
-Most cases on the board carry a short plain-language summary: what happened, what the Court is being asked, and where the case stands. They are there so a reader who doesn't know the case can follow the predictions.
+Most cases on the board come with a short plain-language summary: what happened, what the Court is being asked, and where the case stands. They're there so a reader who doesn't know the case can follow the predictions.
 
-Each summary is written by Claude Sonnet 5, a model that is not one of the three being scored, from the case's docket and filings on the Supreme Court's own website as of the date shown, and nothing else. It has no web access and is told not to add anything it may know from elsewhere. It is instructed to describe both sides' positions without predicting the outcome or judging how important the case is. A summary is rewritten when the case's filings change, and each one is committed to the [public repository](https://github.com/ModelMirrorAI/fedcourtsai/blob/main/docs/case-summaries.md) with the model and date that produced it.
+Each summary is written by Claude Sonnet 5, a model that is not one of the three being scored. It works only from the case's docket and filings on the Supreme Court's website as of the date shown. It has no web access and is told not to add anything it may know from elsewhere. It is instructed to describe both sides' positions without predicting the outcome or judging how important the case is. A summary is rewritten when the case's filings change, and each one is committed to the [public repository](https://github.com/ModelMirrorAI/fedcourtsai/blob/main/docs/case-summaries.md) along with the model and date that produced it.
 
-The summaries are AI-generated and can contain mistakes. They are not predictions and nothing is scored on them. For anything that matters, check the filings.
+The summaries are AI-generated and can contain mistakes. They aren't predictions, and nothing is scored on them. For anything that matters, check the filings.
 
 ## Case topics
 
-Cases on the board carry a topic tag, such as *Criminal law* or *First Amendment*, saying what the petition asks about. Each tag comes from a fixed list of fifteen subjects and is assigned from the petition's questions presented alone, by a Claude model working as a labeler, separate from the three models being scored. A few cases also carry a second topic.
+Cases on the board carry a topic tag, such as *Criminal law* or *First Amendment*, that says what the petition is about. Each tag comes from a fixed list of fifteen subjects. It is assigned by a Claude model working as a labeler, separate from the three models being scored, using only the petition's questions presented. A few cases also carry a second topic.
 
-The tags are added in batches, so newer petitions and emergency applications may not have one yet. Before a batch is published it is checked against a fixed reference set of cases labeled under the same written rules; the labels currently match that set about nine times in ten. The reference labels were also made by AI models, so that figure measures consistency rather than accuracy, and the boundaries between some subjects (civil procedure and constitutional rights, for instance) are genuinely blurry. Topics are descriptive only: no prediction depends on them and nothing is scored on them. The board can be filtered by topic; *No topic* collects the cases not yet labeled and the few the labeler could not place in any subject. The rules and every label are in the [public repository](https://github.com/ModelMirrorAI/fedcourtsai/blob/main/docs/qp-topic.md).
+Tags are added in batches, so newer petitions and emergency applications may not have one yet. Before each batch is published, it is checked against a fixed reference set of cases labeled under the same written rules; the labels currently match that set about nine times in ten. The reference labels were also made by AI models, so that figure measures consistency rather than accuracy. The lines between some subjects (civil procedure and constitutional rights, for instance) are genuinely blurry.
+
+Topics are descriptive only: no prediction depends on them and nothing is scored on them. You can filter the board by topic. *No topic* collects the cases not yet labeled, plus the few the labeler couldn't place in any subject. The rules and every label are in the [public repository](https://github.com/ModelMirrorAI/fedcourtsai/blob/main/docs/qp-topic.md).
 
 ## Updates
 
-The optional weekly update lists what the Court resolved that week against what each model forecast, and the forecasts newly committed to the ledger. It is generated from the ledger, not written, and it states nothing the ledger does not: a forecast is shown as a forecast, never as a score. Each week's email is created as a draft and a person reads and approves it before it is sent. A week with nothing to report is skipped. Every update is also kept on the [Updates](/updates) page, as it was generated.
+The optional weekly update compares what the Court resolved that week with what each model forecast, and lists the forecasts newly committed to the ledger. It is generated from the ledger, not written by hand, and says nothing the ledger doesn't: a forecast is always shown as a forecast, never as a score. Each week's email starts as a draft, and a person reads and approves it before it goes out. Weeks with nothing to report are skipped. Every update is also kept, exactly as generated, on the [Updates](/updates) page.
 
 ## Glossary
 

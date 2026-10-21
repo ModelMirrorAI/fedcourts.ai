@@ -14,8 +14,9 @@ import { published, upcoming, longDate } from "../../lib/results-data.js";
   <h1>Results</h1>
   <p class="intro">
     Each release scores a set of forecasts against what the Court did. A release is fixed at its tag in the{" "}
-    <a href="https://github.com/ModelMirrorAI/fedcourtsai">public repository</a>: its page shows the summary committed
-    there, and later releases add to it rather than revise it. Scores are not combined across releases.
+    <a href="https://github.com/ModelMirrorAI/fedcourtsai">public repository</a>, and its page shows the summary
+    committed there. Later releases add to earlier ones rather than revising them, and scores are never combined
+    across releases.
   </p>
 
   {upcoming.length > 0 && (

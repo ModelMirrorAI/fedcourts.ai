@@ -18,35 +18,43 @@ const groups = STAGE_ORDER.map((stage) => ({
   <p>
     Each model gives every case it predicts a score from 0 to 1 for how much the case matters: 0 is a routine
     petition, 1 is a landmark. The <strong>Average</strong> column is the mean of the models' scores, and the
-    board is sorted by it. The score is a pre-registered opinion, not a forecast: it says nothing about whether the
-    Court will take the case, and it is never marked right or wrong. It is graded later by a separate evaluator
-    for the quality of its reasoning.
+    board is sorted by it. The score is a pre-registered opinion, not a forecast. It says nothing about whether the
+    Court will take the case, and it is never marked right or wrong; instead, a separate evaluator later grades the
+    quality of its reasoning.
   </p>
   <p>
-    Treat the order as rough. Neighbouring rows usually sit closer together than the three models sit to each
-    other within a single row, so the gap between two adjacent ranks is smaller than the disagreement it is built
-    from. Rows are also not strictly comparable when they answer different questions: the models tend to read
-    stakes higher once a case reaches the merits than at the petition stage.
+    Treat the order as rough. The three models' scores for a single case are usually further apart than neighboring
+    cases are from each other, so the gap between two adjacent ranks is smaller than the disagreement behind it. Rows
+    also aren't strictly comparable when they answer different questions: the models tend to rate the stakes higher
+    once a case reaches the merits stage than at the petition stage.
   </p>
   <p>
-    Where the average says "2 of 3 models", one model has not yet predicted the case's current stage; its earlier
-    read is shown inside the case but not averaged in. Scored forecasts, as opposed to these opinions, live
-    on the <a href="https://github.com/ModelMirrorAI/fedcourtsai/blob/main/metrics/README.md">leaderboard in the repository</a>.
+    Where the average says "2 of 3 models", one model hasn't yet predicted the case's current stage. Its earlier score
+    is shown inside the case but isn't included in the average. Scored forecasts, as opposed to these opinions, are on
+    the <a href="https://github.com/ModelMirrorAI/fedcourtsai/blob/main/metrics/README.md">leaderboard in the repository</a>.
   </p>
 
   <h2>What an expanded case shows</h2>
   <p>
-    Most cases open with a short plain-language summary of the case, written by a separate AI model from the Court's
-    filings (<a href="/how-it-works#case-summaries">about the summaries</a>); the line under a case's name on the board
-    is that summary's one-sentence version. The docket number links to the case's page on the Supreme Court's website.
+    Most cases open with a short plain-language summary, written by a separate AI model from the Court's filings
+    (<a href="/how-it-works#case-summaries">about the summaries</a>). The line under each case's name on the board is
+    a one-sentence version of that summary, and the tag beside the name is its <a href="/how-it-works#case-topics">topic</a>.
+    The docket number links to the case's page on the Supreme Court's website.
+  </p>
+  <p>
     Below the summary, a timeline shows how far the case has come and what each possible decision would mean, naming
-    the parties where the case's caption allows; those sentences are fixed wording, not written by a model. A case can be predicted several times as it moves through
-    the Court, and each prediction answers one question asked at one point in time. The steps marked "predicted" on the
-    timeline are those points; the newest is shown, and choosing another step shows the predictions made there.
-    The tag beside each case's name is its <a href="/how-it-works#case-topics">topic</a>. There are three stages, each with its own question. Under each question, the board
-    lists every model's newest prediction: its big-case score, the probability it gave, and (at the first two stages)
-    the single outcome it thought most likely. The probability is what gets scored, so "chance the Court takes the
-    case: 12%, prediction: turn it down" is one position, not two.
+    the parties where the case's caption allows. Those sentences use fixed wording; they aren't written by a model.
+  </p>
+  <p>
+    A case can be predicted several times as it moves through the Court, and each prediction answers one question
+    asked at one point in time. The timeline steps marked "predicted" are those points. The newest is selected to start with;
+    choose another step to see the predictions made there.
+  </p>
+  <p>
+    There are three stages, each with its own question. Under each question, the board lists every model's newest
+    prediction: its big-case score, the probability it gave, and (at the first two stages) the single outcome it
+    thought most likely. The probability is what gets scored, so "chance the Court takes the case: 12%, prediction:
+    turn it down" is one position, not two.
   </p>
   <div class="table-scroll">
     <table>
@@ -66,16 +74,16 @@ const groups = STAGE_ORDER.map((stage) => ({
   <p>
     At the petition stage, "send it back for reconsideration" (a <a href="/how-it-works#gvr">GVR</a>) and "reverse
     without hearing argument" both count as the Court taking the case. For an emergency application, a partial grant
-    counts as a denial. At the merits stage there is no single most-likely outcome to show; the predicted judgment and
-    vote are in the linked prediction. Terms are explained in the <a href="/how-it-works#glossary">glossary</a>.
+    counts as a denial. At the merits stage there's no single most-likely outcome to show; the predicted judgment and
+    vote are in the linked prediction. Legal terms are explained in the <a href="/how-it-works#glossary">glossary</a>.
   </p>
 
   <h2 id="possible-leak">"Possible leak"</h2>
   <p>
     Models are free to search the web when they predict, and afterwards an evaluator reads what each one looked at.
-    A prediction is tagged <span class="tag warn">possible leak</span> when the evaluator found signs that the model may
+    A prediction is tagged <span class="tag warn">possible leak</span> when the evaluator finds signs that the model may
     have seen how the case turned out before predicting it. The tag is a warning about that one prediction, not about
-    the case. A case carries the tag when one of the predictions in its average does.
+    the case. A case carries the tag when any of the predictions in its average does.
   </p>
 </details>
 
