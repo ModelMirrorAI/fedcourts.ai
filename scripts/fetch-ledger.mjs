@@ -62,12 +62,21 @@ async function headCommit() {
   }
 }
 
+// Every metrics/ file the tarball carries, extracted or not: the Data page
+// links only the roll-ups that exist at the commit read.
+const METRICS_FILE = /^[^/]+\/(metrics\/(?:[^/]+\.(?:json|md)|updates\/[^/]+\.md))$/;
+const metricsFiles = new Set();
+
 async function download(dir) {
   const res = await fetch(TARBALL);
   if (!res.ok) throw new Error(`tarball fetch failed: ${res.status}`);
   const file = join(dir, "repo.tgz");
   await pipeline(Readable.fromWeb(res.body), createWriteStream(file));
-  await tar.x({ file, cwd: dir, strip: 1, filter: (p) => WANT.test(p) });
+  await tar.x({ file, cwd: dir, strip: 1, filter: (p) => {
+    const m = p.match(METRICS_FILE);
+    if (m) metricsFiles.add(m[1]);
+    return WANT.test(p);
+  } });
 }
 
 async function readJSON(p) { return JSON.parse(await readFile(p, "utf8")); }
@@ -202,7 +211,23 @@ async function main() {
       topics,
       topics_meta: topicsMeta,
       docket_numbers: docketNumbers,
-      metrics: { leaderboard: metrics.leaderboard, big_cases: metrics["big-cases"], statpack_terms: metrics.statpack?.interim?.terms ?? null },
+      metrics: {
+        leaderboard: metrics.leaderboard,
+        big_cases: metrics["big-cases"],
+        statpack_terms: metrics.statpack?.interim?.terms ?? null,
+        // The statpack's per-Term counts the Data page indexes by Term, copied
+        // field by field from its cert, interim and merits sections.
+        statpack_by_term: metrics.statpack ? {
+          cert: (metrics.statpack.terms ?? []).map((t) => ({
+            term: t.term,
+            grants: t.grants ?? null,
+            filings: Object.fromEntries((t.classes ?? []).map((c) => [c.fee_class, c.filings ?? null])),
+          })),
+          interim: (metrics.statpack.interim?.terms ?? []).map((t) => ({ term: t.term, applications: t.applications ?? null })),
+          merits: (metrics.statpack.merits?.terms ?? []).map((t) => ({ term: t.term, granted: t.granted ?? null, parsed: t.parsed ?? null })),
+        } : null,
+        files: [...metricsFiles].sort(),
+      },
     };
     await mkdir(dirname(fileURLToPath(OUT)), { recursive: true });
     await writeFile(OUT, JSON.stringify(out, null, 1));
