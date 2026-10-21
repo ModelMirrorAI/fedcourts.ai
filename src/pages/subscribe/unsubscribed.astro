@@ -1,0 +1,18 @@
+---
+// Buttondown redirects here after the unsubscribe link in an email is used
+// (Settings: unsubscription redirect URL).
+import Base from "../../layouts/Base.astro";
+---
+<Base title="You're unsubscribed" description="Your address has been removed from FedCourtsAI email updates." noindex>
+  <h1>You're unsubscribed</h1>
+  <p>
+    You won't get any more email from <code>updates@fedcourts.ai</code>: no release announcements and no weekly
+    Supreme Court update. If you only wanted fewer emails, you can <a href="/#signup-email">sign up again</a> and
+    choose just the updates you want.
+  </p>
+  <p>
+    The forecasts stay public either way. The <a href="/">board</a> shows what the models are calling now, and the
+    <a href="/updates">weekly updates</a> are archived on the site.
+  </p>
+  <p>Unsubscribed by mistake, or want your address deleted? Write to <code>contact@fedcourts.ai</code>.</p>
+</Base>
