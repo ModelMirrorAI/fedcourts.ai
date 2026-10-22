@@ -55,10 +55,14 @@ the fetch scripts fail closed, so Pages keeps the last good deploy.
 - **Workflows.** Anything under `.github/` is the deploy and permission
   surface. Pin every action to a full commit SHA with its version in a
   comment, grant `permissions` per workflow at the minimum, and say in the PR
-  description what the change can reach. `rebuild.yml` only pokes the
-  Cloudflare deploy hook; it never commits here.
-- **No secrets.** The deploy hook URL is a repository secret; never print it,
-  log it, or copy it anywhere. Refer to configuration by its role in PR and
+  description what the change can reach. `rebuild.yml` builds the site and,
+  only if that passes, pokes the Cloudflare deploy hook; it never commits
+  here. `lint-actions.yml` runs zizmor and actionlint on any change under
+  `.github/`; run both locally before pushing a workflow change (versions are
+  pinned in that file).
+- **No secrets.** The deploy hook URL is a secret of the `deploy`
+  environment, which only `main` may use, and only `rebuild.yml`'s `poke` job
+  reads it; never print it, log it, or copy it anywhere. Refer to configuration by its role in PR and
   issue text, not by a variable name or value.
 - **Identity.** Commits use a GitHub `noreply` address. No personal or
   organizational email addresses anywhere in the repository.
@@ -66,6 +70,8 @@ the fetch scripts fail closed, so Pages keeps the last good deploy.
   "we used to / now we", no changelog prose. Issue numbers belong in PR
   descriptions and commit messages only.
 - **Cross-repository changes.** A fedcourtsai change that alters a file or
-  field the fetch scripts read (`metrics/*.json`, the case and event records
-  under `data/cases/`, the summaries, a release document) needs a matching PR
+  field the fetch scripts read (`metrics/*.json`, the weekly updates under
+  `metrics/updates/`, `data/qp-topics/qp-topics.json`, the case and event
+  records under `data/cases/`, the case summaries, the release manifest
+  `docs/releases.json` or a release document) needs a matching PR
   here, opened alongside it and linked from both descriptions.
