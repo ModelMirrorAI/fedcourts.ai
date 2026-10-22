@@ -7,7 +7,7 @@
 //
 // Each checkbox sends a `tag` that Buttondown attaches to the subscriber; the
 // pipeline addresses each feed's emails to its tag. Release announcements go to
-// everyone and need no box. The AI-case boxes record interest ahead of that
+// everyone and need no box; the line under the boxes says so. The AI-case boxes record interest ahead of that
 // feed, which says so on its label.
 const { lead = "Get FedCourtsAI updates by email", id = "signup-email" } = Astro.props;
 ---
@@ -19,12 +19,12 @@ const { lead = "Get FedCourtsAI updates by email", id = "signup-email" } = Astro
     <button type="submit">Sign up</button>
   </div>
   <fieldset class="signup-feeds">
-    <legend>Release announcements, 2–4 a year, plus:</legend>
-    <label><input type="checkbox" name="tag" value="weekly-scotus" checked /><span>Weekly Supreme Court update: what resolved against each model's forecast, and the week's new forecasts</span></label>
+    <legend>Choose what you get:</legend>
+    <label><input type="checkbox" name="tag" value="weekly-scotus" checked /><span>Weekly Supreme Court update, most weeks: what resolved against each model's forecast, and the week's new forecasts</span></label>
     <label><input type="checkbox" name="tag" value="ai-cases" /><span>AI cases: new filings and rulings in AI-related litigation <span class="soon">(starting later)</span></span></label>
     <label class="nested"><input type="checkbox" name="tag" value="ai-cases-predictions" /><span>…with the models' forecasts on those cases</span></label>
   </fieldset>
-  <small>Unsubscribe or change these anytime. <a href="/privacy#email-updates">How your address is used</a>.</small>
+  <small>Everyone also gets release announcements, two to four a year. Unsubscribe or change these anytime. <a href="/privacy#email-updates">How your address is used</a>.</small>
 </form>
 
 <style>
