@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Keep the SHA-pinned workflow actions fresh; zizmor requires the pins, so
+  # Dependabot is how they get version and security bumps.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # Routine npm bumps, grouped so one weekly PR carries them. Security
+  # updates still arrive on their own as soon as an advisory lands.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns:
+          - "*"

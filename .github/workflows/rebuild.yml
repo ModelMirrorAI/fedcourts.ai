@@ -1,15 +1,45 @@
 # Daily rebuild so the site picks up the latest ledger commit. It never
-# commits here: it only pokes the Cloudflare Pages deploy hook, and Pages
-# runs `npm run build`, whose prebuild step fetches the fedcourtsai tarball.
+# commits here. The `build` job runs the same install and build Cloudflare
+# Pages runs, including the prebuild fetches from fedcourtsai `main`, and the
+# `poke` job calls the Cloudflare Pages deploy hook only once that build
+# passes. The fetches fail closed, so a ledger change that breaks the site
+# keeps the last good deploy live; building here first turns that into a red
+# scheduled run, which notifies the maintainer, instead of a silent failure
+# inside Cloudflare. Only `poke` holds the deploy-hook secret.
 name: rebuild
 on:
   schedule:
     - cron: "17 11 * * *"   # 11:17 UTC daily, after the fedcourtsai big-cases lane
   workflow_dispatch:
 permissions: {}
+concurrency:
+  group: rebuild
+  cancel-in-progress: false
 jobs:
-  poke:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+  poke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Trigger Cloudflare Pages deploy hook
         env:
