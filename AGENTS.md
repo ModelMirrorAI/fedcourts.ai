@@ -60,8 +60,9 @@ the fetch scripts fail closed, so Pages keeps the last good deploy.
   here. `lint-actions.yml` runs zizmor and actionlint on any change under
   `.github/`; run both locally before pushing a workflow change (versions are
   pinned in that file).
-- **No secrets.** The deploy hook URL is a secret only `rebuild.yml`'s
-  `poke` job reads; never print it, log it, or copy it anywhere. Refer to configuration by its role in PR and
+- **No secrets.** The deploy hook URL is a secret of the `deploy`
+  environment, which only `main` may use, and only `rebuild.yml`'s `poke` job
+  reads it; never print it, log it, or copy it anywhere. Refer to configuration by its role in PR and
   issue text, not by a variable name or value.
 - **Identity.** Commits use a GitHub `noreply` address. No personal or
   organizational email addresses anywhere in the repository.

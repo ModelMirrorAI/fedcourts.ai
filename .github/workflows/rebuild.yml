@@ -39,6 +39,9 @@ jobs:
   poke:
     needs: build
     runs-on: ubuntu-latest
+    # The deploy-hook secret lives in the `deploy` environment, which accepts
+    # only `main`, so no workflow on another branch can read it.
+    environment: deploy
     timeout-minutes: 5
     steps:
       - name: Trigger Cloudflare Pages deploy hook
