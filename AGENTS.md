@@ -69,7 +69,8 @@ the fetch scripts fail closed, so Pages keeps the last good deploy.
   "we used to / now we", no changelog prose. Issue numbers belong in PR
   descriptions and commit messages only.
 - **Cross-repository changes.** A fedcourtsai change that alters a file or
-  field the fetch scripts read (`metrics/*.json`, the case and event records
-  under `data/cases/`, the summaries, the release manifest
+  field the fetch scripts read (`metrics/*.json`, the weekly updates under
+  `metrics/updates/`, `data/qp-topics/qp-topics.json`, the case and event
+  records under `data/cases/`, the case summaries, the release manifest
   `docs/releases.json` or a release document) needs a matching PR
   here, opened alongside it and linked from both descriptions.
