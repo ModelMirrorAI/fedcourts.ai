@@ -11,10 +11,10 @@
     "preview": "astro preview"
   },
   "dependencies": {
-    "@astrojs/mdx": "^8.0.1",
+    "@astrojs/mdx": "^8.1.0",
     "@astrojs/sitemap": "^3.2.0",
-    "@fontsource-variable/source-serif-4": "^5.1.0",
-    "astro": "^7.3.3",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
+    "astro": "^7.4.1",
     "tar": "^7.4.0",
     "yaml": "^2.6.0"
   }
