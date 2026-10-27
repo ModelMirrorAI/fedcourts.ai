@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "fetch": "node scripts/fetch-ledger.mjs && node scripts/fetch-results.mjs",
-    "prebuild": "node scripts/fetch-ledger.mjs && node scripts/fetch-results.mjs",
+    "fetch": "node scripts/fetch-ledger.mjs && node scripts/fetch-results.mjs && node scripts/fetch-status.mjs",
+    "prebuild": "node scripts/fetch-ledger.mjs && node scripts/fetch-results.mjs && node scripts/fetch-status.mjs",
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview"
