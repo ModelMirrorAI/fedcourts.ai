@@ -3,5 +3,6 @@ dist/
 .astro/
 .DS_Store
 src/data/ledger.json
+src/data/status.json
 src/data/results/
 src/data/updates/

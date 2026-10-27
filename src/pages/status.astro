@@ -1,0 +1,249 @@
+---
+// The Status page: whether the pipeline is running, what it has produced, how
+// much of the docket it follows, and the back-test headlines. Everything is
+// copied from the daily status.json fedcourtsai's run-ops job publishes
+// (scripts/fetch-status.mjs); each lane's state, each figure and each reading
+// note was decided there.
+import Base from "../layouts/Base.astro";
+import data from "../data/status.json";
+
+const status: any = data.status;
+const repo = data.source.repo;
+const blob = (path: string) => `https://github.com/${repo}/blob/${status?.source_sha ?? "main"}/${path}`;
+
+const n = (v: unknown) => (typeof v === "number" ? v.toLocaleString("en-US") : "—");
+const when = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleString("en-US", {
+        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC",
+      }) + " UTC"
+    : "—";
+const day = (iso: string | null | undefined) =>
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—";
+
+// A lane's state, as the pipeline judged it, in words.
+const stateLabel: Record<string, string> = {
+  up: "On time",
+  late: "Late",
+  failing: "Last run failed",
+  "no-runs": "No recent runs",
+};
+const resultLabel: Record<string, string> = {
+  success: "Succeeded",
+  failure: "Failed",
+  timed_out: "Timed out",
+  startup_failure: "Failed to start",
+};
+
+const lanes: any[] = status?.lanes ?? [];
+const attention = lanes.filter((l) => l.state !== "up");
+// The snapshot is written once a day; one older than this means the report
+// that writes it has itself stopped, which no lane row can say.
+const STALE_HOURS = 36;
+const stale = status ? Date.now() - Date.parse(status.generated_at) > STALE_HOURS * 3600 * 1000 : false;
+
+// Production: one row per (role, stage) seen in any window, a column per window.
+const windows: any[] = status?.production ?? [];
+const windowHead: Record<string, string> = { "7d": "Last 7 days", "30d": "Last 30 days", term: "This Term" };
+const roleLabel: Record<string, string> = { predictor: "Forecasts", evaluator: "Gradings" };
+const stageKeys: string[] = [];
+for (const w of windows) for (const r of w.by_stage) {
+  const k = `${r.role}|${r.stage}`;
+  if (!stageKeys.includes(k)) stageKeys.push(k);
+}
+const cellsFor = (w: any, k: string) => w.by_stage.find((r: any) => `${r.role}|${r.stage}` === k)?.cells ?? 0;
+
+const cov = status?.coverage;
+const backtests: any[] = status?.backtests ?? [];
+---
+<Base
+  title="Status"
+  description="Whether the FedCourtsAI pipeline is running, what it has produced, how much of the docket it follows, and its back-test results. Updated daily."
+  wide
+>
+  <h1>Status</h1>
+  <p class="intro">
+    A daily snapshot of the pipeline that makes the forecasts: whether each scheduled job is running, how many
+    forecasts and gradings it has produced, how much of the Supreme Court's docket it follows, and the results of
+    its back-tests. The pipeline writes this snapshot itself every morning; this page shows it as written.
+  </p>
+
+  {!status ? (
+    <div class="empty"><p>The pipeline has not published a status snapshot yet.</p></div>
+  ) : (
+    <>
+      <p class="stamp">
+        Snapshot {when(status.generated_at)}
+        {status.source_sha && <> · ledger commit <a href={`https://github.com/${repo}/commit/${status.source_sha}`}>{status.source_sha.slice(0, 7)}</a></>}
+      </p>
+      {stale && (
+        <div class="empty warn">
+          <p>
+            This snapshot is more than a day old. The job that writes it runs every morning, so it may itself have
+            stopped, and the rows below may be out of date.
+          </p>
+        </div>
+      )}
+
+      <section aria-labelledby="up-h">
+        <h2 id="up-h">Is it running?</h2>
+        <p class={`verdict ${attention.length === 0 && status.data_ok !== false ? "ok" : "attn"}`}>
+          {attention.length === 0
+            ? `All ${lanes.length} scheduled jobs are on time.`
+            : `${attention.length} of ${lanes.length} scheduled jobs need attention: ${attention.map((l) => l.label).join(", ")}.`}
+          {" "}
+          {status.data_ok === true && "The committed data passed validation."}
+          {status.data_ok === false && "The committed data is failing validation."}
+        </p>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Job</th>
+                <th scope="col">Schedule</th>
+                <th scope="col">Last started</th>
+                <th scope="col">Last result</th>
+                <th scope="col">State</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lanes.map((l) => (
+                <tr>
+                  <th scope="row">{l.label}<small>{l.what}</small></th>
+                  <td>{l.schedule}</td>
+                  <td class="mono">{when(l.last_started_at)}</td>
+                  <td>
+                    {l.last_conclusion ? resultLabel[l.last_conclusion] ?? l.last_conclusion : "—"}
+                    {l.runs_7d > 0 && <small>{l.successes_7d} of {l.runs_7d} succeeded this week</small>}
+                  </td>
+                  <td><span class={`state ${l.state}`}>{stateLabel[l.state] ?? l.state}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="note">
+          A job is late when it has not started since its most recent scheduled time, allowing two hours because
+          GitHub often starts scheduled jobs late. Only runs on the production branch count. A run that was skipped,
+          or replaced in the queue by a newer one, counts as started but has no result.
+        </p>
+      </section>
+
+      <section aria-labelledby="prod-h">
+        <h2 id="prod-h">What it has produced</h2>
+        <div class="table-scroll">
+          <table class="narrow">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                {windows.map((w) => <th scope="col" class="num">{windowHead[w.window] ?? w.window}<small>{day(w.start)} – {day(w.end)}</small></th>)}
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="total">
+                <th scope="row">Model runs</th>
+                {windows.map((w) => <td class="num">{n(w.cells)}</td>)}
+              </tr>
+              <tr class="total">
+                <th scope="row">Events covered</th>
+                {windows.map((w) => <td class="num">{n(w.events)}</td>)}
+              </tr>
+              {stageKeys.map((k) => {
+                const [role, stage] = k.split("|");
+                return (
+                  <tr>
+                    <th scope="row" class="sub">{roleLabel[role] ?? role}, {stage}</th>
+                    {windows.map((w) => <td class="num">{n(cellsFor(w, k))}</td>)}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p class="note">
+          Each model run is one model forecasting one event, or one judge grading one event's forecasts. A run is
+          counted once its results are merged into the ledger, so the most recent day can read low.
+        </p>
+      </section>
+
+      <section aria-labelledby="cov-h">
+        <h2 id="cov-h">Coverage</h2>
+        <div class="stats">
+          <p class="stat"><span class="n">{n(cov.events_predicted)}</span><span class="l">events forecast<small>{n(cov.predicted_resolved)} of them now decided, {n(cov.predictions)} forecasts and {n(cov.evaluations_forward)} gradings in all</small></span></p>
+          {cov.watchlist != null && (
+            <p class="stat"><span class="n">{n(cov.watchlist)}</span><span class="l">pending petitions distributed for a conference<small>as of {day(cov.frontier_as_of)}</small></span></p>
+          )}
+          {cov.documents_provisioned != null && (
+            <p class="stat"><span class="n">{n(cov.documents_provisioned)}</span><span class="l">of those with at least one filing stored<small>the petition, a brief or another document the models can read</small></span></p>
+          )}
+          {cov.next_conference && (
+            <p class="stat"><span class="n">{n(cov.next_conference_petitions)}</span><span class="l">petitions at the next conference<small>{day(cov.next_conference)}</small></span></p>
+          )}
+          <p class="stat"><span class="n">{n(cov.public_cases)}</span><span class="l">dockets on the public ledger</span></p>
+          {cov.corpus_dockets != null && (
+            <p class="stat"><span class="n">{n(cov.corpus_dockets)}</span><span class="l">dockets in the research corpus<small>the history the base rates are read from</small></span></p>
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="bt-h">
+        <h2 id="bt-h">Back-tests</h2>
+        <p>
+          A back-test replays decided cases with the outcome hidden. Every outcome was public before the run, so a
+          back-test measures recall of known history, not foresight. None of these figures is a claim about how well
+          the models forecast; the <a href="/results">results</a> are.
+        </p>
+        {backtests.length === 0 && <div class="empty"><p>No back-test has been published yet.</p></div>}
+        {backtests.map((b) => (
+          <article class="backtest">
+            <h3>{b.name}</h3>
+            <p class="stamp">
+              <a href={blob(b.artifact)}>{b.artifact}</a>{b.vintage && ` · ${day(b.vintage)}`}
+            </p>
+            <p>{b.summary}</p>
+            {b.table && (
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>{b.table.columns.map((c: string, i: number) => <th scope="col" class={i >= 2 ? "num" : undefined}>{c}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {b.table.rows.map((row: string[]) => (
+                      <tr>{row.map((cell, i) => (i === 0 ? <th scope="row">{cell}</th> : <td class={i >= 2 ? "num" : undefined}>{cell}</td>))}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p class="note">{b.reading}</p>
+          </article>
+        ))}
+      </section>
+    </>
+  )}
+</Base>
+
+<style>
+  .intro { max-width: var(--wide); }
+  .verdict { font-size: 1.05rem; padding-left: 0.8rem; border-left: 3px solid var(--rule); }
+  .verdict.ok { border-left-color: var(--accent); }
+  .verdict.attn { border-left-color: var(--ink); font-weight: 560; }
+  .warn { border-color: var(--ink); }
+  tbody th { font-weight: 560; border-bottom-color: var(--rule); }
+  th small, td small { display: block; font-weight: 400; color: var(--muted); font-size: 0.82rem; }
+  th.sub { font-weight: 400; padding-left: 1rem; }
+  tr.total td { font-weight: 560; }
+  .state { white-space: nowrap; }
+  .state.late, .state.failing, .state.no-runs { font-weight: 620; }
+  .state.late::before, .state.failing::before, .state.no-runs::before { content: "● "; }
+  .state.up { color: var(--muted); }
+  .table-scroll table.narrow { min-width: 30rem; }
+  .backtest { border-top: 1px solid var(--rule); padding-top: 0.4rem; margin-top: 1.5rem; }
+  .backtest h3 { margin-top: 0.6rem; }
+  .stats .stat { grid-template-columns: 9ch 1fr; }
+  @media (max-width: 560px) {
+    .stats .stat { grid-template-columns: 1fr; }
+    .stats .stat .n { text-align: left; }
+  }
+  .note { font-size: 0.88rem; color: var(--muted); max-width: var(--wide); }
+</style>

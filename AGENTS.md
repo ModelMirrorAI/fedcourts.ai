@@ -13,7 +13,8 @@ README describes how the pieces fit together.
 The site **states what the fedcourtsai repo states and computes nothing**.
 Every figure, ledger row and result comes from fedcourtsai at build time:
 `scripts/fetch-ledger.mjs` reads `main`, `scripts/fetch-results.mjs` reads
-each release at its own tag. Never type a figure, a count, a date of a
+each release at its own tag, and `scripts/fetch-status.mjs` reads the daily
+`status.json` on the `ops-metrics` branch. Never type a figure, a count, a date of a
 result or a quoted finding into a page: render it from the fetched data, or
 change fedcourtsai so the data carries it. A page that restates a result in
 prose quotes the release's own public summary, not a paraphrase of it.
@@ -73,5 +74,6 @@ the fetch scripts fail closed, so Pages keeps the last good deploy.
   field the fetch scripts read (`metrics/*.json`, the weekly updates under
   `metrics/updates/`, `data/qp-topics/qp-topics.json`, the case and event
   records under `data/cases/`, the case summaries, the release manifest
-  `docs/releases.json` or a release document) needs a matching PR
+  `docs/releases.json`, a release document, or `status.json` on the
+  `ops-metrics` branch) needs a matching PR
   here, opened alongside it and linked from both descriptions.
