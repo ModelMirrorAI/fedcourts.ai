@@ -34,7 +34,8 @@ const modelName = (id) => MODEL_NAMES[id] ?? id;
 const longDate = (d) =>
   d ? new Date(`${String(d).slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "";
 const repo = ledger.source?.repo ?? "ModelMirrorAI/fedcourtsai";
-// The case's question-presented topic, if the labeler has reached it (docs/qp-topic.md).
+// The case's topic, if the labeler has reached it (docs/qp-topic.md): read from
+// the petition's questions presented, or from an application's own filing and docket.
 const topic = ledger.topics?.[row.case_id] ?? null;
 // Names and docket number (big-cases.json 1.1+): the short caption where the
 // harness could derive one, else the full caption, clamped. The board's own
