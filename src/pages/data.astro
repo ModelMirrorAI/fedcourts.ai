@@ -1,8 +1,9 @@
 ---
 // The Data page: the analytics roll-ups fedcourtsai commits under metrics/,
-// linked at the exact commit this build read, and an index of the statpack's
-// per-Term counts. Every figure is copied from metrics/statpack.json; a file
-// the commit does not carry is not listed.
+// linked at the exact commit this build read, an index of the statpack's
+// per-Term counts, and the docket pack's topic mix by stage. Every figure is
+// copied from metrics/statpack.json or metrics/docket.json; a file the commit
+// does not carry is not listed.
 import Base from "../layouts/Base.astro";
 import Stamp from "../components/Stamp.astro";
 import ledger from "../data/ledger.json";
@@ -65,6 +66,20 @@ const merits = new Map((byTerm?.merits ?? []).map((t: any) => [t.term, t]));
 const terms = [...new Set([...cert.keys(), ...merits.keys()])].sort((a, b) => b - a);
 const n = (v: unknown) => (typeof v === "number" ? v.toLocaleString("en-US") : "—");
 const statpackMd = blob("metrics/statpack.md");
+
+// The docket pack's topic mix: one column per stage, rows in the order the
+// stages list them, each share a share of its own stage.
+const mix: any[] = ledger.metrics.topic_mix ?? [];
+const mixLabels: string[] = [];
+for (const stage of mix) for (const s of stage.shares) if (!mixLabels.includes(s.label)) mixLabels.push(s.label);
+const mixShare = mix.map((stage) => new Map(stage.shares.map((s: any) => [s.label, s])));
+// Rounded on the share itself, as the docket pack rounds it, so a tie the
+// binary value sits just below rounds the same way on both.
+const pct = (v: unknown) => (typeof v === "number" ? `${(Number(v.toFixed(3)) * 100).toFixed(1)}%` : "—");
+const stageName: Record<string, string> = { cert: "Cert petitions", merits: "Merits cases", interim: "Emergency applications" };
+const stageCount = (stage: any) =>
+  stage.cases === stage.rows ? `n=${n(stage.cases)}` : `est. n=${n(stage.cases)}; ${n(stage.rows)} rows`;
+const docketMd = blob("metrics/docket.md");
 ---
 <Base
   title="Data"
@@ -147,6 +162,45 @@ const statpackMd = blob("metrics/statpack.md");
         corpus. Applications include requests for more time. A merits case counts as decided once its judgment has
         been parsed. A Term still under way shows only what has happened so far.
       </p>
+    </section>
+  )}
+
+  {mix.length > 0 && (
+    <section aria-labelledby="topics-h">
+      <h2 id="topics-h">By topic</h2>
+      <p>
+        The share of each stage's labeled cases under each topic, copied from the{" "}
+        <a href={`${docketMd}#topic-mix-by-stage`}>docket pack</a>. Each column is a share of its own stage, never of
+        the whole docket, and the columns are not steps of one funnel: they cover different cases, labeled to very
+        different depths and from different inputs. Read each column's scope note below the table before quoting
+        a share. Labeled rows on hand are in parentheses.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Topic</th>
+              {mix.map((stage) => (
+                <th scope="col" class="num">{stageName[stage.stage] ?? stage.stage} ({stageCount(stage)})</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {mixLabels.map((label) => (
+              <tr>
+                <th scope="row">{label}</th>
+                {mixShare.map((shares) => {
+                  const s: any = shares.get(label);
+                  return <td class="num">{s ? `${pct(s.share)} (${n(s.rows)})` : "—"}</td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {mix.map((stage) => (
+        <p class="note"><strong>{stageName[stage.stage] ?? stage.stage}:</strong> {stage.scope_note}</p>
+      ))}
     </section>
   )}
 </Base>
