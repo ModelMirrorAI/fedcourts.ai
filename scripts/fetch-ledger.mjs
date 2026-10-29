@@ -112,7 +112,7 @@ async function main() {
 
     // --- metrics roll-ups (copied, not recomputed) ---
     const metrics = {};
-    for (const name of ["leaderboard", "claim-scores", "statpack", "backtest", "big-cases"]) {
+    for (const name of ["leaderboard", "claim-scores", "statpack", "backtest", "big-cases", "docket"]) {
       try { metrics[name] = await readJSON(join(dir, "metrics", `${name}.json`)); } catch { metrics[name] = null; }
     }
     // --- case topics (docs/qp-topic.md): one primary label per case, plus an
@@ -255,6 +255,22 @@ async function main() {
           interim: (metrics.statpack.interim?.terms ?? []).map((t) => ({ term: t.term, applications: t.applications ?? null })),
           merits: (metrics.statpack.merits?.terms ?? []).map((t) => ({ term: t.term, granted: t.granted ?? null, parsed: t.parsed ?? null })),
         } : null,
+        // The docket pack's topic mix by stage, copied field by field; each
+        // stage keeps its scope string, which the page prints beside it.
+        topic_mix: (metrics.docket?.topic_mix?.stages ?? []).map((s) => ({
+          stage: s.stage,
+          vocabulary: s.vocabulary,
+          cases: s.cases,
+          rows: s.rows,
+          scope_note: s.scope_note,
+          shares: (s.shares ?? []).map((x) => ({
+            label: x.label,
+            cases: x.cases,
+            rows: x.rows,
+            share: x.share,
+            classified_share: x.classified_share ?? null,
+          })),
+        })),
         files: [...metricsFiles].sort(),
       },
     };
