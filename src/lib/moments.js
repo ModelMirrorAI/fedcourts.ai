@@ -77,7 +77,8 @@ export const plainOutcome = (stage, disposition) => {
 // own order: petition, emergency application, merits).
 export const MOMENT_ORDER = Object.keys(MOMENTS);
 
-// Display names for the question-presented topic labels (qp-topic-v0,
+// Display names for the case topic labels (qp-topic-v0 for petitions and
+// qp-topic-v1 for emergency applications, which share one list;
 // fedcourtsai/docs/qp-topic.md). `unclassifiable` is deliberately absent:
 // the board shows no tag for it.
 export const TOPIC_NAMES = {

@@ -24,7 +24,7 @@ const COMMITS_FEED = `https://github.com/${REPO}/commits/${BRANCH}.atom`;
 const OUT = new URL("../src/data/ledger.json", import.meta.url);
 const UPDATES_OUT = new URL("../src/data/updates/", import.meta.url);
 
-const WANT = /^[^/]+\/(metrics\/[^/]+\.json|metrics\/updates\/\d{4}-W\d{2}\.md|data\/qp-topics\/qp-topics\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
+const WANT = /^[^/]+\/(metrics\/[^/]+\.json|metrics\/updates\/\d{4}-W\d{2}\.md|data\/qp-topics\/qp-topics(-applications)?\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
 
 // A case summary (docs/case-summaries.md in the ledger repo): YAML front matter
 // written by the harness, then "## " sections of plain prose — three under body
@@ -115,30 +115,35 @@ async function main() {
     for (const name of ["leaderboard", "claim-scores", "statpack", "backtest", "big-cases"]) {
       try { metrics[name] = await readJSON(join(dir, "metrics", `${name}.json`)); } catch { metrics[name] = null; }
     }
-    // --- question-presented topics (docs/qp-topic.md): one primary label per
-    // case, plus an optional secondary. Copied only from a gate-passing artifact.
+    // --- case topics (docs/qp-topic.md): one primary label per case, plus an
+    // optional secondary, from two labels artifacts that share one vocabulary —
+    // the petitions' questions-presented labels and the emergency applications'
+    // (`qp-topic-v1` keeps every petition label and boundary unchanged). Each is
+    // copied only when its own run passed the agreement gate. Petitions are read
+    // first, so a case carrying both keeps its petition label.
     const topics = {};
-    const docketNumbers = {}; // case_id → Court docket number ("25-123"), where the labels artifact records one
-    let topicsMeta = null;
-    try {
-      const qp = await readJSON(join(dir, "data", "qp-topics", "qp-topics.json"));
-      if (qp.agreement?.gate_passed) {
-        for (const e of qp.entries ?? []) {
-          if (e.case_id && e.docket_number) docketNumbers[e.case_id] = String(e.docket_number);
-          if (!e.case_id || !e.label) continue;
-          const prev = topics[e.case_id];
-          if (prev && (prev.batch ?? 0) > (e.batch ?? 0)) continue;
-          topics[e.case_id] = { label: e.label, secondary: e.secondary ?? null, batch: e.batch ?? null };
-        }
-        topicsMeta = {
-          vocabulary: qp.vocabulary ?? null,
-          labeler: qp.labeler ?? null,
-          agreement_rate: qp.agreement?.overall_rate ?? null,
-          reference_n: qp.agreement?.overall_n ?? null,
-          cases: Object.keys(topics).length,
-        };
+    const docketNumbers = {}; // case_id → Court docket number ("25-123"), where a labels artifact records one
+    const topicsMeta = {};
+    for (const [frame, file] of [["petitions", "qp-topics.json"], ["applications", "qp-topics-applications.json"]]) {
+      let qp;
+      try { qp = await readJSON(join(dir, "data", "qp-topics", file)); } catch { continue; /* no labels artifact for this frame yet: its cases show no topic tag */ }
+      if (!qp.agreement?.gate_passed) continue;
+      const own = {};
+      for (const e of qp.entries ?? []) {
+        if (e.case_id && e.docket_number && !docketNumbers[e.case_id]) docketNumbers[e.case_id] = String(e.docket_number);
+        if (!e.case_id || !e.label || (topics[e.case_id] && !own[e.case_id])) continue;
+        const prev = own[e.case_id];
+        if (prev && (prev.batch ?? 0) > (e.batch ?? 0)) continue;
+        own[e.case_id] = topics[e.case_id] = { label: e.label, secondary: e.secondary ?? null, batch: e.batch ?? null };
       }
-    } catch { /* no labels artifact yet: the board simply shows no topic tags */ }
+      topicsMeta[frame] = {
+        vocabulary: qp.vocabulary ?? null,
+        labeler: qp.labeler ?? null,
+        agreement_rate: qp.agreement?.overall_rate ?? null,
+        reference_n: qp.agreement?.overall_n ?? null,
+        cases: Object.keys(own).length,
+      };
+    }
 
     const frozen = metrics.leaderboard?.frozen_process ?? { digests: [], since: null };
     const frozenDigests = new Set(frozen.digests ?? []);
