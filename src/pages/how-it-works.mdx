@@ -26,7 +26,9 @@ Each prediction is a small folder in the repository, written by one model about 
 - the single outcome the model thinks most likely;
 - at merits, a predicted judgment and vote.
 
-Beside it are three short prose files: why the number is what it is; what the model expects the Court to do, and on what grounds; and what the model consulted beyond the materials it was given. That last file is the model's own account of its research. The system separately logs every tool call the model actually made.
+Beside it are short prose files: why the number is what it is; what the model expects the Court to do, and on what grounds; and what the model consulted beyond the materials it was given. That last file is the model's own account of its research. The system separately logs every tool call the model actually made.
+
+Newer predictions also carry a [prediction summary](#prediction-summaries): one paragraph in plain words, which the board shows under each model's figures.
 
 The reasoning matters as much as the number. Predicting grant or deny on a cert petition is close to calling a coin with a known bias. The harder, more interesting question is whether a model can anticipate which justices will form the majority, who will write the opinion, and on what legal ground.
 
@@ -90,6 +92,10 @@ Most cases on the board come with a short plain-language summary: what happened,
 Each summary is written by Claude Sonnet 5, a model that is not one of the three being scored. It works only from the case's docket and filings on the Supreme Court's website as of the date shown. It has no web access and is told not to add anything it may know from elsewhere. It is instructed to describe both sides' positions without predicting the outcome or judging how important the case is. A summary is rewritten when the case's filings change, and each one is committed to the [public repository](https://github.com/ModelMirrorAI/fedcourtsai/blob/main/docs/case-summaries.md) along with the model and date that produced it.
 
 The summaries are AI-generated and can contain mistakes. They aren't predictions, and nothing is scored on them. For anything that matters, check the filings.
+
+## Prediction summaries
+
+Under each model's figures on the board is a short paragraph, written by that model in the same run as its prediction, that says the prediction in plain words: what it expects the Court to do, how likely it thinks that is, and the main reason. It restates the model's numbers and must agree with them; it is not a second prediction. Nothing grades or scores it, and the graders never see it. Predictions made before these summaries were added show only the model's reason for its big-case score.
 
 ## Case topics
 
