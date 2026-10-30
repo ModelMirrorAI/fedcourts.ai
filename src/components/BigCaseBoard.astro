@@ -303,7 +303,10 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
   .board .figs strong, .board .figs em { color: var(--ink); }
   .board .sep { margin: 0 0.35em; }
   .board .cell { margin-left: auto; font-size: 0.86rem; white-space: nowrap; }
+  .board .plain { margin: 0.3rem 0 0; max-width: 60ch; }
   .board .why { margin: 0.25rem 0 0; font-size: 0.92rem; max-width: 60ch; }
+  .board .plain + .why { color: var(--muted); }
+  .board .why-label { font-weight: 560; color: var(--ink); }
   .board .foot { color: var(--muted); font-size: 0.86rem; margin-top: 0.8rem; }
 
   .board .tag.topic { color: var(--ink); background: var(--accent-soft); border-color: transparent; font-family: var(--serif); font-size: 0.74rem; }

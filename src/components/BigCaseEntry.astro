@@ -69,6 +69,10 @@ const firstAt = {};
 events.forEach((ev, i) => { const st = stageOf(ev); if (!(`data-first-${st}` in firstAt)) firstAt[`data-first-${st}`] = ids[i]; });
 const stageList = STAGE_ORDER.filter((st) => `data-first-${st}` in firstAt).join(" ");
 
+// Each cell's plain-language restatement of its prediction (prediction_summary.md),
+// keyed by cell path. Older cells have none and show the big-case rationale alone.
+const plainSummary = (read) => (read.cell_path && ledger.prediction_summaries?.[read.cell_path]) || null;
+
 const isCurrent = (read, eventId) => {
   const c = reads.get(read.predictor_id);
   return Boolean(c && c.event_id === eventId && c.run_id === read.run_id);
@@ -174,7 +178,12 @@ const isCurrent = (read, eventId) => {
                 </span>
                 {r.cell_url && <a class="cell" href={r.cell_url}>full prediction on GitHub ↗</a>}
               </div>
-              {r.big_case_rationale && <p class="why">{r.big_case_rationale}</p>}
+              {plainSummary(r)
+                ? <Fragment>
+                    {plainSummary(r).map((para) => <p class="plain">{para}</p>)}
+                    {r.big_case_rationale && <p class="why"><span class="why-label">Why this big-case score:</span> {r.big_case_rationale}</p>}
+                  </Fragment>
+                : r.big_case_rationale && <p class="why">{r.big_case_rationale}</p>}
             </li>
           ))}
         </ul>

@@ -24,7 +24,7 @@ const COMMITS_FEED = `https://github.com/${REPO}/commits/${BRANCH}.atom`;
 const OUT = new URL("../src/data/ledger.json", import.meta.url);
 const UPDATES_OUT = new URL("../src/data/updates/", import.meta.url);
 
-const WANT = /^[^/]+\/(metrics\/[^/]+\.json|metrics\/updates\/\d{4}-W\d{2}\.md|data\/qp-topics\/qp-topics(-applications)?\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
+const WANT = /^[^/]+\/(metrics\/[^/]+\.json|metrics\/updates\/\d{4}-W\d{2}\.md|data\/qp-topics\/qp-topics(-applications)?\.json|data\/cases\/.*\/(event\.yaml|outcome\.json|prediction\.json|prediction_summary\.md|evaluation\.json)|data\/cases\/[^/]+\/[^/]+\/summaries\/\d{4}-\d{2}-\d{2}\.md)$/;
 
 // A case summary (docs/case-summaries.md in the ledger repo): YAML front matter
 // written by the harness, then "## " sections of plain prose — three under body
@@ -103,6 +103,14 @@ async function download(dir) {
   } });
 }
 
+// A cell's prediction_summary.md (docs/predicted-artifacts.md in the ledger
+// repo): about 80 words restating the prediction for a lay reader. Plain prose
+// by contract, so it is carried as paragraphs of text and rendered escaped.
+function parsePredictionSummary(text) {
+  const paragraphs = text.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+  return paragraphs.length ? paragraphs : null;
+}
+
 async function readJSON(p) { return JSON.parse(await readFile(p, "utf8")); }
 
 async function main() {
@@ -152,6 +160,7 @@ async function main() {
     // --- walk the case tree ---
     const events = new Map();
     const summaries = {};
+    const predictionSummaries = {}; // cell path → paragraphs
     const base = join(dir, "data", "cases");
     for await (const f of glob("**/*", { cwd: base })) {
       const parts = f.split(sep);
@@ -174,6 +183,11 @@ async function main() {
       else if (leaf === "outcome.json" && parts.length === 5) ev.outcome = await readJSON(full);
       else if (leaf === "prediction.json" && parts[4] === "predictions") ev.predictions.push(await readJSON(full));
       else if (leaf === "evaluation.json" && parts[4] === "evaluations") ev.evaluations.push(await readJSON(full));
+      else if (leaf === "prediction_summary.md" && parts[4] === "predictions" && parts.length === 8) {
+        const parsed = parsePredictionSummary(await readFile(full, "utf8"));
+        if (parsed) predictionSummaries[`data/cases/${parts.slice(0, -1).join("/")}`] = parsed;
+        continue;
+      }
       else continue;
       events.set(key, ev);
     }
@@ -220,6 +234,10 @@ async function main() {
     }
     rows.sort((a, b) => (b.first_predicted_at ?? "").localeCompare(a.first_predicted_at ?? ""));
 
+    // Prediction summaries go out only for the cells the board shows a read of.
+    const boardCells = new Set((metrics["big-cases"]?.rows ?? []).flatMap((r) => (r.events ?? []).flatMap((e) => (e.reads ?? []).map((x) => x.cell_path))));
+    const predictionSummariesShown = Object.fromEntries(Object.entries(predictionSummaries).filter(([k]) => boardCells.has(k)));
+
     const out = {
       built_at: new Date().toISOString(),
       source: { repo: REPO, branch: BRANCH, sha: head.sha, committed_at: head.at },
@@ -237,6 +255,7 @@ async function main() {
       predictors,
       rows,
       summaries,
+      prediction_summaries: predictionSummariesShown,
       topics,
       topics_meta: topicsMeta,
       docket_numbers: docketNumbers,
@@ -277,7 +296,7 @@ async function main() {
     await mkdir(dirname(fileURLToPath(OUT)), { recursive: true });
     await writeFile(OUT, JSON.stringify(out, null, 1));
     const updates = await copyUpdates(dir);
-    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${Object.keys(summaries).length} case summaries, ${Object.keys(topics).length} topic labels, ${updates} weekly updates, sha ${head.sha ?? "unknown"}`);
+    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${Object.keys(summaries).length} case summaries, ${Object.keys(predictionSummariesShown).length} prediction summaries on the board, ${Object.keys(topics).length} topic labels, ${updates} weekly updates, sha ${head.sha ?? "unknown"}`);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
