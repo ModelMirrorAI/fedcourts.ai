@@ -1,0 +1,293 @@
+---
+// The state-AGs page: how far each state's attorney general goes in taking AI
+// developers to court, and the actions behind it. Everything is copied from
+// metrics/state-ags.json, which fedcourtsai's `state-ags` command writes from
+// its hand-curated registry (docs/state-ags.md there): each tier, count,
+// transition and holder was decided there. The page only lays it out.
+import Base from "../layouts/Base.astro";
+import ledger from "../data/ledger.json";
+
+const board: any = (ledger.metrics as any).state_ags ?? null;
+const { repo, sha } = ledger.source;
+const ref = sha ?? "main";
+const blob = (path: string) => `https://github.com/${repo}/blob/${ref}/${path}`;
+
+// Display names and the tile grid. Positions only place a square per
+// jurisdiction, so every state, DC included, is the same size and none is
+// too small to point at or read.
+const NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado",
+  CT: "Connecticut", DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas",
+  KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts",
+  MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana",
+  NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico",
+  NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma",
+  OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota",
+  TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+};
+const GRID: string[][] = [
+  ["AK", "", "", "", "", "", "", "", "", "", "", "ME"],
+  ["", "", "", "", "", "", "WI", "", "", "", "VT", "NH"],
+  ["", "WA", "ID", "MT", "ND", "MN", "IL", "MI", "", "NY", "MA", ""],
+  ["", "OR", "NV", "WY", "SD", "IA", "IN", "OH", "PA", "NJ", "CT", "RI"],
+  ["", "CA", "UT", "CO", "NE", "MO", "KY", "WV", "VA", "MD", "DE", ""],
+  ["", "", "AZ", "NM", "KS", "AR", "TN", "NC", "SC", "DC", "", ""],
+  ["", "", "", "", "OK", "LA", "MS", "AL", "GA", "", "", ""],
+  ["HI", "", "", "", "TX", "", "", "", "", "FL", "", ""],
+];
+const TILE = 52;
+const STEP = 56;
+const tiles = GRID.flatMap((row, y) =>
+  row.flatMap((state, x) => (state ? [{ state, x: x * STEP, y: y * STEP }] : [])),
+);
+
+const offices: any[] = board?.offices ?? [];
+const byState = new Map<string, any>(offices.map((o) => [o.state, o]));
+const actions: any[] = board?.actions ?? [];
+const byId = new Map<string, any>(actions.map((a) => [a.id, a]));
+
+const KIND: Record<string, string> = {
+  letter: "Letter",
+  amicus: "Amicus brief",
+  investigation: "Investigation",
+  settlement: "Settlement",
+  suit: "Lawsuit",
+  defense: "Defending a state law",
+  advocacy: "Advocacy",
+};
+const TIERS = [
+  { tier: 0, label: "None recorded", what: "No action on record in the window." },
+  { tier: 1, label: "Signals", what: "Signed a letter to AI companies." },
+  { tier: 2, label: "Joins", what: "Joined an amicus brief, or an investigation or suit another state leads." },
+  { tier: 3, label: "Investigates", what: "Opened its own investigation, or reached a settlement." },
+  { tier: 4, label: "Sues", what: "Filed its own lawsuit, or leads a multistate one." },
+];
+
+const day = (iso: string | null | undefined) =>
+  iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "—";
+const person = (h: any) => (h?.name ? `${h.name}${h.party ? ` (${h.party})` : ""}` : "Not yet called");
+const transitionText = (o: any) => {
+  const t = o?.transition;
+  if (!t) return null;
+  if (t.status === "uncalled") return `The ${day(t.start)} succession is not yet called.`;
+  return `${person(t)} takes office ${day(t.start)}.`;
+};
+const countsText = (o: any) => {
+  const parts = Object.entries(o.window_counts ?? {})
+    .filter(([, n]) => (n as number) > 0)
+    .map(([k, n]) => `${n} ${KIND[k]?.toLowerCase() ?? k}`);
+  return parts.length ? parts.join(", ") : "none";
+};
+const tileLabel = (state: string) => {
+  const o = byState.get(state);
+  if (!o) return `${NAMES[state]}: no roster entry`;
+  const change = transitionText(o);
+  return `${NAMES[state]}: ${person(o.holder)}. Tier ${o.tier}, ${o.tier_label}.${change ? ` ${change}` : ""}`;
+};
+const role = (a: any, state: string) =>
+  a.states.length === 1 ? "Alone" : a.lead === state ? "Led" : "Joined";
+---
+<Base
+  title="State attorneys general and AI"
+  description="How far each state's attorney general goes in taking AI developers to court, the cases and investigations behind it, and the 2026 changes in office."
+  wide
+>
+  <h1>State attorneys general and AI</h1>
+  <p class="intro">
+    State attorneys general act against AI developers mostly outside the federal courts: in state-court lawsuits,
+    in investigations and settlements, and in letters signed by many states at once. This page shows, for every
+    state and the District of Columbia, the furthest step its attorney general has taken on the record, and the
+    actions behind it. Each action is drawn from the office's own announcement.
+  </p>
+
+  {!board ? (
+    <div class="empty"><p>The ledger has not published the state attorneys general board yet.</p></div>
+  ) : (
+    <>
+      <p class="stamp">
+        Read on {day(board.as_of)} · method <a href={blob("docs/state-ags.md")}>{board.method}</a> · ledger
+        {" "}<a href={blob("metrics/state-ags.json")}>metrics/state-ags.json</a>
+      </p>
+
+      {offices.length === 0 ? (
+        <div class="empty"><p>The roster of attorneys general has not been filled in yet.</p></div>
+      ) : (
+        <>
+          <section aria-labelledby="map-h">
+            <h2 id="map-h">How far each office has gone</h2>
+            <p>
+              Each square is one state, shaded by the highest step its office reached in the last
+              {" "}{board.window_days} days. The number in the square is the same step. A ring marks an office
+              changing hands. Select a state to see its actions.
+            </p>
+            <figure class="ag-map">
+              <svg
+                viewBox={`0 0 ${12 * STEP} ${8 * STEP}`}
+                role="group"
+                aria-labelledby="map-h"
+              >
+                {tiles.map(({ state, x, y }) => {
+                  const o = byState.get(state);
+                  const tier = o?.tier ?? 0;
+                  return (
+                    <a href={`#ag-${state}`} aria-label={tileLabel(state)} class={`tile t${tier}`}>
+                      <title>{tileLabel(state)}</title>
+                      <rect x={x} y={y} width={TILE} height={TILE} rx="4" />
+                      <text x={x + TILE / 2} y={y + 23} class="code" text-anchor="middle">{state}</text>
+                      <text x={x + TILE / 2} y={y + 44} class="num" text-anchor="middle">{tier}</text>
+                      {o?.transition && (
+                        <circle cx={x + TILE - 7} cy={y + 7} r="4.5" class="ring" />
+                      )}
+                    </a>
+                  );
+                })}
+              </svg>
+              <figcaption>
+                <ul class="legend">
+                  {TIERS.map((t) => (
+                    <li><span class={`swatch t${t.tier}`} aria-hidden="true">{t.tier}</span> <strong>{t.label}</strong> {t.what}</li>
+                  ))}
+                  <li><span class="swatch ring-key" aria-hidden="true"></span> <strong>Changing hands</strong> A successor has been chosen, or the race is not yet called.</li>
+                </ul>
+              </figcaption>
+            </figure>
+            <p class="note">
+              The step measures what an office has done in public, as its own announcements record it. It is not a
+              judgment of merit or outcome, and an investigation never announced does not show. "None recorded" means
+              none on record, not none taken. Defending a state AI law against a developer's challenge is listed with
+              the office's actions but does not raise its step.
+            </p>
+          </section>
+
+          <section aria-labelledby="table-h">
+            <h2 id="table-h">Every office</h2>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">State</th>
+                    <th scope="col">Attorney general</th>
+                    <th scope="col">Step</th>
+                    <th scope="col">Actions in the window</th>
+                    <th scope="col">Changing hands</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {offices.map((o) => (
+                    <tr>
+                      <th scope="row"><a href={`#ag-${o.state}`}>{NAMES[o.state] ?? o.state}</a></th>
+                      <td>{person(o.holder)}</td>
+                      <td>{o.tier} · {o.tier_label}</td>
+                      <td>{countsText(o)}</td>
+                      <td>
+                        {transitionText(o) ?? "—"}
+                        {o.transition_overdue && <small>The roster is behind: this date has passed.</small>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section aria-labelledby="states-h">
+            <h2 id="states-h">Actions by state</h2>
+            {offices.map((o) => {
+              const mine = (o.action_ids ?? []).map((id: string) => byId.get(id)).filter(Boolean);
+              return (
+                <section id={`ag-${o.state}`} class="state" aria-labelledby={`ag-${o.state}-h`}>
+                  <h3 id={`ag-${o.state}-h`}>{NAMES[o.state] ?? o.state}</h3>
+                  <p class="who">
+                    {person(o.holder)} · step {o.tier}, {o.tier_label}
+                    {transitionText(o) && <> · {transitionText(o)}</>}
+                  </p>
+                  {mine.length === 0 ? (
+                    <p class="muted">No AI action on record.</p>
+                  ) : (
+                    <ul class="actions">
+                      {mine.map((a: any) => (
+                        <li class={a.in_window ? "" : "aged"}>
+                          <a href={a.sources[0]}>{a.title}</a>
+                          <small>
+                            {day(a.announced)} · {KIND[a.kind] ?? a.kind} · {role(a, o.state)}
+                            {a.states.length > 1 && <> with {a.states.length - 1} other office{a.states.length > 2 ? "s" : ""}</>}
+                            {a.court && <> · {a.court}, {a.docket_number}</>}
+                            {a.holders?.[o.state] && a.holders[o.state] !== o.holder?.name && <> · under {a.holders[o.state]}</>}
+                            {!a.in_window && <> · outside the window</>}
+                          </small>
+                          <span class="why">{a.why}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
+          </section>
+        </>
+      )}
+    </>
+  )}
+</Base>
+
+<style>
+  .ag-map {
+    --t0: #e4e2dc; --t0-ink: #1c1f26;
+    --t1: #86b6ef; --t1-ink: #1c1f26;
+    --t2: #3987e5; --t2-ink: #ffffff;
+    --t3: #1c5cab; --t3-ink: #ffffff;
+    --t4: #0d366b; --t4-ink: #ffffff;
+    margin: 1rem 0 1.5rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    .ag-map {
+      --t0: #2a2c33; --t0-ink: #e6e3da;
+      --t1: #184f95; --t1-ink: #ffffff;
+      --t2: #2a78d6; --t2-ink: #ffffff;
+      --t3: #6da7ec; --t3-ink: #131419;
+      --t4: #b7d3f6; --t4-ink: #131419;
+    }
+  }
+  .ag-map svg { width: 100%; max-width: 44rem; height: auto; display: block; }
+  .tile rect { stroke: var(--paper); stroke-width: 2; }
+  .tile text { font-family: var(--mono); pointer-events: none; }
+  .tile .code { font-size: 18px; font-weight: 700; }
+  .tile .num { font-size: 16px; }
+  .tile .ring { fill: none; stroke-width: 2.5; }
+  .tile:hover rect, .tile:focus rect { stroke: var(--accent); stroke-width: 4; }
+  .tile:focus { outline: none; }
+  .tile:focus-visible rect { stroke: var(--ink); stroke-width: 4; }
+  .t0 rect { fill: var(--t0); } .t0 text, .t0 .ring { fill: var(--t0-ink); stroke: var(--t0-ink); }
+  .t1 rect { fill: var(--t1); } .t1 text, .t1 .ring { fill: var(--t1-ink); stroke: var(--t1-ink); }
+  .t2 rect { fill: var(--t2); } .t2 text, .t2 .ring { fill: var(--t2-ink); stroke: var(--t2-ink); }
+  .t3 rect { fill: var(--t3); } .t3 text, .t3 .ring { fill: var(--t3-ink); stroke: var(--t3-ink); }
+  .t4 rect { fill: var(--t4); } .t4 text, .t4 .ring { fill: var(--t4-ink); stroke: var(--t4-ink); }
+  .tile text { stroke: none; }
+  .tile .ring { fill: none; }
+  .legend { list-style: none; padding: 0; margin: 0.75rem 0 0; font-size: 0.9rem; }
+  .legend li { margin: 0.25rem 0; }
+  .swatch {
+    display: inline-block; width: 1.4rem; height: 1.4rem; border-radius: 3px; vertical-align: middle;
+    text-align: center; font-family: var(--mono); font-size: 0.75rem; line-height: 1.4rem;
+  }
+  .swatch.t0 { background: var(--t0); color: var(--t0-ink); }
+  .swatch.t1 { background: var(--t1); color: var(--t1-ink); }
+  .swatch.t2 { background: var(--t2); color: var(--t2-ink); }
+  .swatch.t3 { background: var(--t3); color: var(--t3-ink); }
+  .swatch.t4 { background: var(--t4); color: var(--t4-ink); }
+  .ring-key { border: 2.5px solid var(--ink); border-radius: 50%; width: 0.9rem; height: 0.9rem; margin: 0 0.25rem; }
+  .note { font-size: 0.9rem; color: var(--muted); }
+  .state { border-top: 1px solid var(--rule); padding-top: 0.75rem; margin-top: 1rem; scroll-margin-top: 1rem; }
+  .state:target { background: var(--accent-soft); }
+  .state h3 { margin: 0 0 0.25rem; }
+  .who { margin: 0 0 0.5rem; }
+  .muted { color: var(--muted); }
+  .actions { padding-left: 1.1rem; }
+  .actions li { margin: 0.5rem 0; }
+  .actions small, .actions .why { display: block; }
+  .actions small { color: var(--muted); font-family: var(--mono); font-size: 0.78rem; }
+  .actions .aged { opacity: 0.75; }
+  td small { display: block; color: var(--muted); }
+</style>

@@ -120,7 +120,7 @@ async function main() {
 
     // --- metrics roll-ups (copied, not recomputed) ---
     const metrics = {};
-    for (const name of ["leaderboard", "claim-scores", "statpack", "backtest", "big-cases", "docket"]) {
+    for (const name of ["leaderboard", "claim-scores", "statpack", "backtest", "big-cases", "docket", "state-ags"]) {
       try { metrics[name] = await readJSON(join(dir, "metrics", `${name}.json`)); } catch { metrics[name] = null; }
     }
     // --- case topics (docs/qp-topic.md): one primary label per case, plus an
@@ -262,6 +262,10 @@ async function main() {
       metrics: {
         leaderboard: metrics.leaderboard,
         big_cases: metrics["big-cases"],
+        // The state-AGs board (docs/state-ags.md in the ledger repo), copied
+        // whole: every tier, count, transition and coalition figure is computed
+        // there. Null until the ledger publishes it; the page says so.
+        state_ags: metrics["state-ags"],
         statpack_terms: metrics.statpack?.interim?.terms ?? null,
         // The statpack's per-Term counts the Data page indexes by Term, copied
         // field by field from its cert, interim and merits sections.
