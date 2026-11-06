@@ -35,6 +35,16 @@ prose quotes the release's own public summary, not a paraphrase of it.
 - **Show the change.** Cloudflare Pages attaches a preview deployment to each
   PR branch. For a visible change, name the pages it affects in the PR
   description so the maintainer knows where to look on the preview.
+- **A check that has to wait becomes a scheduled routine, not an open
+  session.** When the only work left is a check due days or weeks out (a
+  deploy or rebuild effect, a close after a quiet period), comment on the
+  issue what will be checked, when, and the result that closes it; schedule a
+  fresh-session routine for that date whose prompt carries the issue, the
+  check and the criteria in full, and which comments the result, closes the
+  issue when the criteria pass, and otherwise @-mentions the maintainer
+  (`modelmirror`); record the routine where the next session looks first (the
+  project memory, in a Claude project session); then end the session. The
+  routine reads and comments only: it pushes and merges nothing.
 
 ## Local gate
 
