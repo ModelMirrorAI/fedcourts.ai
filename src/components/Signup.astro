@@ -21,7 +21,7 @@ const { lead = "Get FedCourtsAI updates by email", id = "signup-email" } = Astro
   <fieldset class="signup-feeds">
     <legend>Choose what you get:</legend>
     <label><input type="checkbox" name="tag" value="weekly-scotus" checked /><span>Weekly Supreme Court update, most weeks: what resolved against each model's forecast, and the week's new forecasts</span></label>
-    <label><input type="checkbox" name="tag" value="ai-cases" /><span>AI cases: new filings and rulings in AI-related litigation <span class="soon">(starting later)</span></span></label>
+    <label><input type="checkbox" name="tag" value="ai-cases" /><span>AI cases: new filings and rulings in AI-related litigation</span></label>
     <label class="nested"><input type="checkbox" name="tag" value="ai-cases-predictions" /><span>…with the models' forecasts on those cases</span></label>
   </fieldset>
   <small>Everyone also gets release announcements, two to four a year. Unsubscribe or change these anytime. <a href="/privacy#email-updates">How your address is used</a>.</small>
@@ -52,5 +52,4 @@ const { lead = "Get FedCourtsAI updates by email", id = "signup-email" } = Astro
   }
   .signup-feeds input { accent-color: var(--accent); flex: none; }
   .signup-feeds label.nested { padding-left: 1.6rem; }
-  .signup-feeds .soon { color: var(--muted); }
 </style>
