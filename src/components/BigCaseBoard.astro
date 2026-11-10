@@ -78,10 +78,10 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
       <p class="court-day">
         The Court's next conference is <time datetime={courtDay}>{courtDayText}</time>.
         {atCourtDay !== null && (atCourtDay === 0
-          ? " No case on this board is set for it."
+          ? " No case on this board is set for it yet."
           : atCourtDay === 1
-            ? " 1 case on this board is set for it."
-            : ` ${atCourtDay} cases on this board are set for it.`)}
+            ? " 1 case on this board is set for it so far."
+            : ` ${atCourtDay} cases on this board are set for it so far.`)}
       </p>
     )}
     <div class="board-tools">
