@@ -17,6 +17,17 @@ const rows = board?.rows ?? [];
 const top = rows.slice(0, SHOW);
 const rest = rows.slice(SHOW);
 
+// The Court's next conference day (big-cases.json 1.5), with the pipeline's
+// count of the board's cases distributed for it. The board carries no build
+// day, so a day that has passed by the time this page is built is dropped
+// rather than shown as upcoming, the same rule the case timelines follow.
+const buildDay = new Date().toISOString().slice(0, 10);
+const courtDay = board?.court_next_conference && String(board.court_next_conference) >= buildDay ? String(board.court_next_conference) : null;
+const courtDayText = courtDay
+  ? new Date(`${courtDay}T00:00:00Z`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
+  : "";
+const atCourtDay = courtDay ? board.cases_at_court_next_conference ?? null : null;
+
 // Topic filter chips: one per primary topic on the board, largest first, then
 // "No topic" for the cases that show no tag. Counts are over the whole board.
 const topicCounts = new Map();
@@ -63,6 +74,16 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
 ---
 {board ? (
   <section class="board" style={`--n:${predictors.length}`}>
+    {courtDay && (
+      <p class="court-day">
+        The Court's next conference is <time datetime={courtDay}>{courtDayText}</time>.
+        {atCourtDay !== null && (atCourtDay === 0
+          ? " No case on this board is set for it."
+          : atCourtDay === 1
+            ? " 1 case on this board is set for it."
+            : ` ${atCourtDay} cases on this board are set for it.`)}
+      </p>
+    )}
     <div class="board-tools">
       <div class="search" hidden>
         <label for="case-search">Find a case</label>
@@ -211,6 +232,8 @@ const pickCss = Array.from({ length: MAX_EVENTS }, (_, i) => i + 1).map((k) => `
 <style is:global set:html={pickCss}></style>
 <style is:global>
   .board { --score-w: 4.6rem; margin: 1.5rem 0 2rem; font-variant-numeric: tabular-nums; }
+  .board .court-day { margin: 0 0 0.8rem; font-size: 0.95rem; }
+  .board .court-day time { font-weight: 560; }
   .board .board-tools { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.4rem 1.5rem; margin: 0 0 0.3rem; }
   .board .scale { color: var(--muted); font-size: 0.86rem; margin: 0; text-align: right; margin-left: auto; }
   .board .search { flex: 1 1 18rem; max-width: 26rem; }
