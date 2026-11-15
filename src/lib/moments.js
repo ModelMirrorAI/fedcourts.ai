@@ -1,4 +1,5 @@
-// The declared forecast moments, keyed by event id. A hand-kept mirror of
+// The declared forecast moments, keyed by event id, in the order a case meets
+// them. A hand-kept mirror of
 // DECLARED_MOMENTS in fedcourtsai/src/fedcourtsai/pipeline/moments.py — that
 // table is closed and code-owned, so this changes only when a row is added there.
 // `binary` names what `probability` is the probability OF at that stage
@@ -47,13 +48,17 @@ const m = (stage, when) => ({ stage, when, ...STAGES[stage] });
 
 export const MOMENTS = {
   "evt-petition-arrival-disposition": m("cert", "when the petition was docketed, before anything else happened on the docket"),
-  "evt-petition-disposition": m("cert", "once the petition was distributed for conference (and again after each relist)"),
+  "evt-order-call-for-response-disposition": m("cert", "after the Court called for a response to the petition"),
+  "evt-petition-disposition": m("cert", "once the petition was distributed for conference"),
+  "evt-order-relist-disposition": m("cert", "after the Court first relisted the petition for another conference"),
   "evt-order-cvsg-disposition": m("cert", "after the Court asked for the Solicitor General's views"),
+  "evt-brief-sg-disposition": m("cert", "once the Solicitor General filed the brief the Court invited"),
   "evt-motion-disposition": m("interim", "when the application arrived"),
   "evt-order-response-requested-disposition": m("interim", "after the Court called for a response"),
   "evt-brief-response-disposition": m("interim", "once a response was filed"),
   "evt-order-judgment": m("merits", "when the Court agreed to hear the case"),
   "evt-brief-judgment": m("merits", "once both sides' merits briefs were in"),
+  "evt-argument-judgment": m("merits", "after the case was argued"),
 };
 
 export const STAGE_ORDER = ["cert", "interim", "merits"];

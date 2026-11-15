@@ -30,6 +30,7 @@ data/cases/<court>/<docket>/events/<event>/
     prediction.json                   the probability, the call, and at merits the judgment and votes
     reasoning.md                      why this number
     predicted_reasoning.md            what the Court will do, and on what grounds
+    prediction_summary.md             a short plain-language summary of the forecast
     retrieval.md                      what the model consulted beyond the materials it was given
   evaluations/<evaluator>/<model>/<run>/
     evaluation.json, evaluation.md    one evaluator's grading of one prediction
@@ -52,7 +53,7 @@ It's worth being precise about what this proves. It shows that a specific predic
 
 ## Frozen and shakedown
 
-Predictions made before the process was frozen on {ledger.frozen_process.since ? ledger.frozen_process.since.slice(0, 10) : "the freeze date"} stay on the ledger with their timestamps. They were made while the prompts and settings were still changing, so nothing about them was pre-registered and no reported figure includes them. The table marks them as shakedown. Only frozen-scope events count toward the results.
+Predictions made before the process was first frozen on {ledger.frozen_process.since ? ledger.frozen_process.since.slice(0, 10) : "the freeze date"}, or outside a registered version of it since, stay on the ledger with their timestamps. They were made while the prompts and settings were still changing, so nothing about them was pre-registered and no reported figure includes them. The table marks them as shakedown. Only frozen-scope events count toward the results.
 
 ## Every predicted event
 

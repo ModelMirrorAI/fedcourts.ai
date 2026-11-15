@@ -50,7 +50,7 @@ prose quotes the release's own public summary, not a paraphrase of it.
 
 ```bash
 npm ci
-npm run build      # runs both fetches first, then the Astro build
+npm run build      # runs the three fetches first, then the Astro build
 ```
 
 The build needs network access to `github.com`, `codeload.github.com` and
@@ -82,8 +82,8 @@ the fetch scripts fail closed, so Pages keeps the last good deploy.
   descriptions and commit messages only.
 - **Cross-repository changes.** A fedcourtsai change that alters a file or
   field the fetch scripts read (`metrics/*.json`, the weekly updates under
-  `metrics/updates/`, `data/qp-topics/qp-topics.json`, the case and event
-  records under `data/cases/`, the case summaries, the release manifest
+  `metrics/updates/`, the two topic labels files under `data/qp-topics/`, the case, event and
+  prediction records under `data/cases/`, the case summaries, the release manifest
   `docs/releases.json`, a release document, or `status.json` on the
   `ops-metrics` branch) needs a matching PR
   here, opened alongside it and linked from both descriptions.

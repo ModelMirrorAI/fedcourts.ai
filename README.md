@@ -15,19 +15,20 @@ The public site for [FedCourtsAI](https://github.com/ModelMirrorAI/fedcourtsai).
 
 | Component | What it renders |
 |---|---|
-| `<Stats />` | The headline counters with a ledger stamp |
-| `<LedgerStat key="…" label="…" note="…" />` | One figure from `ledger.counts` (`events_open`, `events_resolved`, `events_with_predictions`, `predictions`, `predictions_frozen`, `evaluations`, `leaderboard_events_scored`, `leaderboard_predictors_ranked`) |
-| `<LedgerTable limit={n} onlyOpen onlyResolved />` | The ledger table, newest first |
-| `<Stamp />` | "ledger `<sha>` · `<time>`" pointing at the exact commit read |
+| `<LedgerTable />` | Every event with a forward prediction, newest first |
+| `<Stamp />` | "Updated `<date>` · ledger commit `<sha>`", pointing at the exact commit read |
+| `<BigCaseBoard />` | The front page's big-case board, built from `<BigCaseEntry />` and `<CaseTimeline />` |
+| `<EventKey />` | The collapsed key to the forecast moments in `src/lib/moments.js` |
+| `<Signup />` | The email signup form |
 
-Import them at the top of a page: `import Stats from "../components/Stats.astro";`
+Figures on a page come from `ledger.counts` in `src/data/ledger.json`. Import a component at the top of a page: `import Stamp from "../components/Stamp.astro";`
 
 ## Local build (optional)
 
 ```bash
 npm install
-npm run build      # runs the fetch first
+npm run build      # runs the three fetches first
 npm run preview
 ```
 
-`npm run dev` needs `src/data/ledger.json` to exist; run `npm run fetch` once first.
+`npm run dev` needs the fetched files under `src/data/` to exist; run `npm run fetch` once first.

@@ -12,9 +12,9 @@ FedCourtsAI asks a simple question: when a frontier AI model reads a case that i
 
 Each prediction is about one **event**: one question about one case, asked at one point in the case's life. A case can pass through three stages, and each stage has its own question.
 
-- **Cert.** Will the Court take the case? Asked when a petition is docketed, again when it is distributed for conference (and after each relist), and again if the Court asks for the Solicitor General's views.
+- **Cert.** Will the Court take the case? Asked when a petition is docketed, again when it is distributed for conference, and again if the Court calls for a response, relists the petition, asks for the Solicitor General's views, or receives the brief it invited.
 - **Interim.** Will the Court grant an emergency application for a stay or an injunction? Asked when the application arrives, after the Court calls for a response, and once the response is filed.
-- **Merits.** Will the Court disturb the judgment below? Asked when the Court agrees to hear the case, and again once both sides' merits briefs are in.
+- **Merits.** Will the Court disturb the judgment below? Asked when the Court agrees to hear the case, again once both sides' merits briefs are in, and again after the case is argued.
 
 These moments are fixed in advance, in a closed table in the code. A case is predicted when it enters the pool, and predicted again only when something about it changes: a distribution, a relist, a call for the Solicitor General's views, a new filing. Nothing runs on a fixed clock, and no one can pick a case by hand: each run works out what it owes from the committed record.
 
@@ -50,13 +50,13 @@ Before the first term's predictions could be scored, the process was frozen. The
 
 Predictions made while the pipeline was still being built stay in the repository with their timestamps, labeled as **shakedown**. They tested the machinery; nothing about them was pre-registered, and nothing is claimed from them.
 
-When the process changes, its version number changes, and results from before and after are never pooled. Two processes working from two sets of information are two separate experiments.
+When the process changes, its version number changes and a new counting window opens. A model's headline figure is its record across its windows, with one counted forecast per event, and each figure lists the windows it draws on.
 
 ## How scoring works
 
 Almost every cert petition is denied, so a model that answers "denied" every time will be right most of the time. Accuracy alone tells you nothing. Instead, each prediction is scored on **skill against a base rate**: the historical grant rate for similar petitions, grouped by how prominent a case is. Simply restating the base rate earns nothing; beating it earns credit. The probability is also scored for calibration, using the Brier score.
 
-Two more things are pre-registered alongside each forecast. The **big-case score** is each model's view of how much a case matters, explicitly not how likely it is to be granted. It is what the front page ranks by, and it is graded later by an independent evaluator rather than by the outcome. At the merits stage, the predicted **vote** is scored against the actual vote.
+Two more things are pre-registered alongside each forecast. The **big-case score** is each model's view of how much a case matters, explicitly not how likely it is to be granted. It is what the front page ranks by, and it is graded later by the graders rather than by the outcome. At the merits stage, the predicted **vote** is scored against the actual vote.
 
 ## Which cases
 
@@ -76,12 +76,12 @@ Some cases are collected but not predicted: petitions filed without a lawyer or 
 
 Some of these are temporary and some are built into the design. It's worth being clear about which is which.
 
-- **The numbers are small.** The first frozen set of cert predictions covers roughly a hundred events, all distributed for one conference. A hundred events can't separate three models with any confidence, so figures from it are a first look, not a ranking.
-- **The first set isn't a sample of the docket.** It is what remained from earlier funded rounds, and it leans toward more prominent cases. Read it group by group, each against its own base rate; a single pooled number would flatter every model.
+- **The numbers are small.** The first frozen set of cert predictions covered roughly a hundred events, all distributed for one conference. A hundred events can't separate three models with any confidence, so figures from it are a first look, not a ranking.
+- **The first set wasn't a sample of the docket.** It was what remained from earlier funded rounds, and it leaned toward more prominent cases. Read it group by group, each against its own base rate; a single pooled number would flatter every model.
 - **The timestamps rest on GitHub, not on a notary.** Git dates can be set to anything. What the design relies on is the clock of the machine that ran the model, which the model can't change; the public push to a protected branch; and the logged workflow run that produced the commit. That's strong enough for this purpose, but it isn't cryptographic proof, and we don't describe it as such.
 - **Research is self-reported and graded, not prevented.** A model that read an outcome it shouldn't have is caught by a grader reading its research log, not stopped by a wall. Leakage is grounds for exclusion; it isn't made impossible.
 - **Three models, one setup each.** A result about "Claude" here is a result about one particular model, running inside one particular coding tool, with particular prompts. Changing any of those changes the process version.
-- **Cert is the easy stage.** The most interesting predictions, about reasoning and votes, can only be scored at merits, and merits cases resolve months after the forecast. Early results will be almost entirely grant-or-deny.
+- **Cert is the easy stage.** The most interesting predictions, about reasoning and votes, can only be scored at merits, and merits cases resolve months after the forecast. Results so far are almost entirely grant-or-deny.
 - **Scope follows the budget.** How many cases are predicted depends on capacity, and capacity depends on funding. A wider scope is a decision, not a discovery.
 - **None of this is legal advice.** The predictions are experimental model outputs about how a court may act. They are not statements of fact about any judge, and not a basis for any decision. See the [terms](/terms).
 
@@ -136,4 +136,4 @@ There are two optional weekly emails. The Supreme Court update says what the Cou
   <dd>The party asking the Court to take the case, and the party opposing. In a case name, the petitioner is listed first.</dd>
 </dl>
 
-The full design, with the command behind every number that will appear on the results page, lives in the [repository's documentation](https://github.com/ModelMirrorAI/fedcourtsai#documentation).
+The full design, with the command behind every number on the results pages, lives in the [repository's documentation](https://github.com/ModelMirrorAI/fedcourtsai#documentation).
