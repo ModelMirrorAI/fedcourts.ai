@@ -153,9 +153,20 @@ async function main() {
       };
     }
 
-    const frozen = metrics.leaderboard?.frozen_process ?? { digests: [], since: null };
-    const frozenDigests = new Set(frozen.digests ?? []);
-    const frozenSince = frozen.since ? Date.parse(frozen.since) : null;
+    // The counting windows are the membership rule (fedcourtsai
+    // metrics/README.md): a prediction is in frozen scope when its stamp falls
+    // inside a window registered for its digest that has not been revoked. A
+    // closed window still counts. `since` and `digests` on the same block
+    // describe only the newest label, so neither is read as a filter here.
+    const windows = (metrics.leaderboard?.frozen_process?.windows ?? []).map((w) => ({
+      predictor_id: w.predictor_id ?? null,
+      digest: w.digest,
+      opens: Date.parse(w.opens),
+      closes: w.closes ? Date.parse(w.closes) : Infinity,
+      revoked: w.revoked_at != null,
+    }));
+    const liveWindows = windows.filter((w) => !w.revoked && Number.isFinite(w.opens));
+    const firstOpens = liveWindows.length ? new Date(Math.min(...liveWindows.map((w) => w.opens))).toISOString() : null;
 
     // --- walk the case tree ---
     const events = new Map();
@@ -194,9 +205,12 @@ async function main() {
 
     const isFrozen = (p) => {
       const pv = p.process_version;
-      if (!pv || !frozenDigests.has(pv.digest) || !frozenSince) return false;
+      if (!pv) return false;
       const t = Date.parse(pv.stamped_at ?? "");
-      return Number.isFinite(t) && t >= frozenSince;
+      if (!Number.isFinite(t)) return false;
+      return liveWindows.some((w) => w.digest === pv.digest
+        && (w.predictor_id === null || w.predictor_id === p.predictor_id)
+        && t >= w.opens && t < w.closes);
     };
     const isForward = (p) => (p.context?.mode ?? "forward") === "forward";
 
@@ -241,7 +255,7 @@ async function main() {
     const out = {
       built_at: new Date().toISOString(),
       source: { repo: REPO, branch: BRANCH, sha: head.sha, committed_at: head.at },
-      frozen_process: { since: frozen.since ?? null, digests: frozen.digests?.length ?? 0 },
+      frozen_process: { since: firstOpens, windows: liveWindows.length },
       counts: {
         events_with_predictions: rows.length,
         events_open: rows.filter((r) => !r.resolved).length,

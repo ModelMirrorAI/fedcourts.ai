@@ -58,8 +58,8 @@ const caseLabel = (r) => r.title ?? `${r.court}/${r.docket}`;
   </div>
 )}
 <p><small>
-  An event is <em>frozen</em> when every prediction on it carries a process stamp from the freeze
-  {frozen_process.since ? ` (${day(frozen_process.since)})` : ""} or later; otherwise it is <em>shakedown</em>, and nothing is claimed from it.
+  An event is <em>frozen</em> when a prediction on it carries a process stamp from a registered version of the process, the first of which was frozen
+  {frozen_process.since ? ` on ${day(frozen_process.since)}` : ""}; otherwise it is <em>shakedown</em>, and nothing is claimed from it.
   Links open the event's folder at the commit this page was built from.
 </small></p>
 
