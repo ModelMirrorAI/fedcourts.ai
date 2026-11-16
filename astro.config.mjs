@@ -4,6 +4,7 @@ import sitemap from "@astrojs/sitemap";
 
 export default defineConfig({
   site: "https://fedcourts.ai",
-  integrations: [mdx(), sitemap()],
+  // The subscribe pages are redirect targets marked noindex, so the sitemap leaves them out.
+  integrations: [mdx(), sitemap({ filter: (page) => !page.includes("/subscribe/") })],
   build: { format: "directory" },
 });
