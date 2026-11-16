@@ -15,7 +15,7 @@ The ledger is a folder tree in a public repository. Every prediction the models 
 <dl class="stats">
   <div class="stat"><span class="n">{ledger.counts.events_with_predictions}</span><span class="l">events with at least one prediction<small>{ledger.counts.events_open} open · {ledger.counts.events_resolved} resolved</small></span></div>
   <div class="stat"><span class="n">{ledger.counts.predictions}</span><span class="l">predictions<small>{ledger.counts.predictions_frozen} in frozen scope</small></span></div>
-  <div class="stat"><span class="n">{ledger.counts.evaluations}</span><span class="l">gradings<small>{ledger.counts.leaderboard_events_scored} events scored in frozen scope</small></span></div>
+  <div class="stat"><span class="n">{ledger.counts.evaluations}</span><span class="l">grading files on the ledger, shakedown included<small>{ledger.metrics.leaderboard?.evaluations_total ?? 0} of them count toward the {ledger.counts.leaderboard_events_scored} events scored in frozen scope</small></span></div>
 </dl>
 
 ## What one entry is

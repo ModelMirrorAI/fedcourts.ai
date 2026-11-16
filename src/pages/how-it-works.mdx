@@ -3,6 +3,7 @@ layout: ../layouts/Page.astro
 title: How it works
 description: Frontier AI models commit predictions about Supreme Court events to a public git ledger before the Court acts, then grade each other once it has.
 ---
+import ledger from "../data/ledger.json";
 
 **In short.** Three AI models predict what the Supreme Court will do in real cases, before the Court acts. Each prediction is timestamped and saved to a public record, then scored against what the Court actually did. Because the answer doesn't exist yet when the prediction is made, the models can't have memorized it.
 
@@ -66,6 +67,7 @@ Some cases are always included, whatever their rank, and the ranking can't push 
 
 - a random sample of new filings, drawn from a seed fixed in advance;
 - every petition the federal government files;
+- every petition whose ranking score reaches a floor fixed in advance;
 - every case where the Court has asked for the Solicitor General's views.
 
 Once a case is in, it stays in. A later budget decision never rewrites the record.
@@ -76,8 +78,8 @@ Some cases are collected but not predicted: petitions filed without a lawyer or 
 
 Some of these are temporary and some are built into the design. It's worth being clear about which is which.
 
-- **The numbers are small.** The first frozen set of cert predictions covered roughly a hundred events, all distributed for one conference. A hundred events can't separate three models with any confidence, so figures from it are a first look, not a ranking.
-- **The first set wasn't a sample of the docket.** It was what remained from earlier funded rounds, and it leaned toward more prominent cases. Read it group by group, each against its own base rate; a single pooled number would flatter every model.
+- **The numbers are small.** The leaderboard scores {ledger.counts.leaderboard_events_scored} events so far. That is too few to separate three models with any confidence, and fewer still once the events are split by stage, so the figures are a first look, not a ranking.
+- **The scored events aren't a sample of the docket.** The first set was what remained from earlier funded rounds: cert petitions distributed for a single conference, leaning toward more prominent cases. Later counting windows add petitions predicted as they arrive and emergency applications, and the leaderboard reports each of those as its own stage. Read the results stage by stage and group by group, each against its own base rate; a single pooled number would flatter every model.
 - **The timestamps rest on GitHub, not on a notary.** Git dates can be set to anything. What the design relies on is the clock of the machine that ran the model, which the model can't change; the public push to a protected branch; and the logged workflow run that produced the commit. That's strong enough for this purpose, but it isn't cryptographic proof, and we don't describe it as such.
 - **Research is self-reported and graded, not prevented.** A model that read an outcome it shouldn't have is caught by a grader reading its research log, not stopped by a wall. Leakage is grounds for exclusion; it isn't made impossible.
 - **Three models, one setup each.** A result about "Claude" here is a result about one particular model, running inside one particular coding tool, with particular prompts. Changing any of those changes the process version.

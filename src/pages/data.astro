@@ -52,6 +52,31 @@ const catalog = [
     base: "metrics/cert-backtest",
     what: "The models replayed on decided cert petitions with the outcome hidden, scored against a base rate that could have been known at the time.",
   },
+  {
+    name: "Merits backtest",
+    base: "metrics/merits-backtest",
+    what: "The models replayed on decided merits cases with the outcome hidden, once at the grant and once after briefing.",
+  },
+  {
+    name: "Salience replay",
+    base: "metrics/salience-replay",
+    what: "The case-selection formula, not the models, replayed over past Terms: how many petitions it would have selected, and how many of those the Court went on to grant.",
+  },
+  {
+    name: "Forecast-document grades",
+    base: "metrics/forecast-document-grades",
+    what: "Each grader's 0 to 1 grade of a model's written forecast of what the Court will do, rolled up per model and per grader over the forecasts the leaderboard scores.",
+  },
+  {
+    name: "Miss review",
+    base: "metrics/miss-review",
+    what: "The scored events at least one model got wrong, each with every model's counted forecast of it.",
+  },
+  {
+    name: "Amicus line",
+    base: "metrics/amicus-line",
+    what: "The fit behind the amicus-adjusted reference line: past grant rates split by whether an amicus brief had reached the docket at the cert stage.",
+  },
 ]
   .map((a) => ({ ...a, md: has(`${a.base}.md`), json: has(`${a.base}.json`) }))
   .filter((a) => a.md || a.json);
@@ -90,7 +115,7 @@ const docketMd = blob("metrics/docket.md");
   <p class="intro">
     Alongside the predictions, the <a href={`https://github.com/${repo}`}>public repository</a> commits a set of
     roll-ups under <code>metrics/</code>: counts and rates about the Court's dockets, and the scores of the models.
-    A scheduled job regenerates and commits each one, so any figure can be traced to the commit that produced it.
+    Scheduled jobs regenerate and commit most of them; the model backtests and the salience replay are written only by a run a maintainer starts, and land through a reviewed pull request. Either way, any figure can be traced to the commit that produced it.
     The links below point to the commit this site was built from. Before quoting a number, read{" "}
     <a href={blob("metrics/README.md")}>the metrics guide</a>: it explains what each figure measures and what can be
     claimed from it.

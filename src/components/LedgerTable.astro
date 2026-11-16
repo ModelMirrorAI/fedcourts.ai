@@ -7,6 +7,8 @@ import ledger from "../data/ledger.json";
 import { momentFor } from "../lib/moments.js";
 
 const { rows, source, frozen_process } = ledger;
+// The predictor count the board reads, so "2 of 3" follows the data on both pages.
+const predictorCount = (ledger.metrics?.big_cases?.predictors ?? []).length;
 const base = source.sha
   ? `https://github.com/${source.repo}/tree/${source.sha}/`
   : `https://github.com/${source.repo}/tree/${source.branch}/`;
@@ -42,7 +44,7 @@ const caseLabel = (r) => r.title ?? `${r.court}/${r.docket}`;
                 {r.title && <small class="mono">{r.court}/{r.docket}</small>}
               </td>
               <td class="mono evt" title={moment ? `${moment.label}: ${moment.when}` : undefined}>{r.event_id}</td>
-              <td>{r.predictors.map(shortId).join(", ")}<small>{r.predictors.length} of 3</small></td>
+              <td>{r.predictors.map(shortId).join(", ")}{predictorCount > 0 && <small>{r.predictors.length} of {predictorCount}</small>}</td>
               <td class="mono">{day(r.first_predicted_at)}</td>
               <td>{r.frozen ? "frozen" : <span class="muted">shakedown</span>}</td>
               <td>

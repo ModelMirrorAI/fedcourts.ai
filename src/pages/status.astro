@@ -169,7 +169,7 @@ const backtests: any[] = status?.backtests ?? [];
       <section aria-labelledby="cov-h">
         <h2 id="cov-h">Coverage</h2>
         <div class="stats">
-          <p class="stat"><span class="n">{n(cov.events_predicted)}</span><span class="l">events forecast<small>{n(cov.predicted_resolved)} of them now decided, {n(cov.predictions)} forecasts and {n(cov.evaluations_forward)} gradings in all</small></span></p>
+          <p class="stat"><span class="n">{n(cov.events_predicted)}</span><span class="l">events forecast<small>{n(cov.predicted_resolved)} of them now decided, {n(cov.predictions)} forecasts in all, and {n(cov.evaluations_forward)} gradings of forecasts committed before the outcome</small></span></p>
           {cov.watchlist != null && (
             <p class="stat"><span class="n">{n(cov.watchlist)}</span><span class="l">pending petitions distributed for a conference<small>as of {day(cov.frontier_as_of)}</small></span></p>
           )}
