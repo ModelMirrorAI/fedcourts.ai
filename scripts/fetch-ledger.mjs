@@ -18,6 +18,8 @@ import * as tar from "tar";
 import YAML from "yaml";
 
 const REPO = "ModelMirrorAI/fedcourtsai";
+// The court whose docket the ledger, its counts and the boards describe.
+const COURT = "scotus";
 const BRANCH = "main";
 const TARBALL = `https://codeload.github.com/${REPO}/tar.gz/refs/heads/${BRANCH}`;
 const COMMITS_FEED = `https://github.com/${REPO}/commits/${BRANCH}.atom`;
@@ -215,12 +217,37 @@ async function main() {
     const isForward = (p) => (p.context?.mode ?? "forward") === "forward";
 
     // --- ledger rows: every event carrying at least one forward prediction ---
+    // The ledger, its counts and its predictors are the Supreme Court
+    // docket's. An event of any other court belongs to a prediction slice,
+    // which fedcourtsai keeps as a population of its own (docs/trial-stage.md):
+    // its rows and counts go out under `slices`, keyed by nothing the Court's
+    // figures read.
     const rows = [];
+    const sliceRows = [];
     const predictors = {};
     let predictionsTotal = 0, predictionsFrozen = 0, evaluationsTotal = 0;
+    let slicePredictions = 0, sliceEvaluations = 0;
     for (const ev of events.values()) {
       const fwd = ev.predictions.filter(isForward);
       if (fwd.length === 0) continue;
+      if (ev.court !== COURT) {
+        slicePredictions += fwd.length;
+        sliceEvaluations += ev.evaluations.length;
+        const sliceTimes = fwd.map((p) => p.process_version?.stamped_at ?? p.created_at).filter(Boolean).sort();
+        sliceRows.push({
+          path: `data/cases/${ev.court}/${ev.docket}/events/${ev.event_id}`,
+          court: ev.court, docket: ev.docket, event_id: ev.event_id,
+          title: ev.meta?.title ?? null, kind: ev.meta?.kind ?? null, stage: ev.meta?.stage ?? null,
+          moment: ev.meta?.moment ?? null,
+          opened_at: ev.meta?.opened_at ?? null,
+          first_predicted_at: sliceTimes[0] ?? null,
+          predictors: [...new Set(fwd.map((p) => p.predictor_id))].sort(),
+          resolved: Boolean(ev.outcome),
+          resolved_at: ev.outcome?.resolved_at ?? null,
+          evaluations: ev.evaluations.length,
+        });
+        continue;
+      }
       predictionsTotal += fwd.length;
       evaluationsTotal += ev.evaluations.length;
       for (const p of fwd) {
@@ -247,6 +274,7 @@ async function main() {
       });
     }
     rows.sort((a, b) => (b.first_predicted_at ?? "").localeCompare(a.first_predicted_at ?? ""));
+    sliceRows.sort((a, b) => (b.first_predicted_at ?? "").localeCompare(a.first_predicted_at ?? ""));
 
     // Prediction summaries go out only for the cells the board shows a read of.
     const boardCells = new Set((metrics["big-cases"]?.rows ?? []).flatMap((r) => (r.events ?? []).flatMap((e) => (e.reads ?? []).map((x) => x.cell_path))));
@@ -268,6 +296,16 @@ async function main() {
       },
       predictors,
       rows,
+      slices: {
+        counts: {
+          events_with_predictions: sliceRows.length,
+          events_open: sliceRows.filter((r) => !r.resolved).length,
+          events_resolved: sliceRows.filter((r) => r.resolved).length,
+          predictions: slicePredictions,
+          evaluations: sliceEvaluations,
+        },
+        rows: sliceRows,
+      },
       summaries,
       prediction_summaries: predictionSummariesShown,
       topics,
@@ -310,7 +348,7 @@ async function main() {
     await mkdir(dirname(fileURLToPath(OUT)), { recursive: true });
     await writeFile(OUT, JSON.stringify(out, null, 1));
     const updates = await copyUpdates(dir);
-    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${Object.keys(summaries).length} case summaries, ${Object.keys(predictionSummariesShown).length} prediction summaries on the board, ${Object.keys(topics).length} topic labels, ${updates} weekly updates, sha ${head.sha ?? "unknown"}`);
+    console.log(`ledger.json: ${rows.length} events, ${predictionsTotal} predictions (${predictionsFrozen} frozen-scope), ${sliceRows.length} slice events, ${Object.keys(summaries).length} case summaries, ${Object.keys(predictionSummariesShown).length} prediction summaries on the board, ${Object.keys(topics).length} topic labels, ${updates} weekly updates, sha ${head.sha ?? "unknown"}`);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
